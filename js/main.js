@@ -131,7 +131,7 @@ function renderProjects() {
   if(!projects.length){grid.innerHTML='<p style="color:var(--txt3);font-family:var(--mono);font-size:.8rem">// Aucun projet.</p>';return;}
   grid.innerHTML=projects.map(p=>{
     const likes=Store.getLikes(p.id),comments=Store.getComments(p.id);
-    return `<div class="proj-card reveal" data-category="${p.category||'lab'}" onclick="window.location='pages/project.html?id=${p.id}'">
+    return `<div class="proj-card reveal" data-category="${p.category||'lab'}" onclick="window.location='/Portfolio/pages/project.html?id=${p.id}'">
       <div class="proj-banner"><span style="position:relative;z-index:1">${p.coverEmoji||'⬡'}</span><div class="proj-banner-ov"></div></div>
       <div class="proj-body">
         <p class="proj-cat">${escHtml(p.category||'lab')}</p>
@@ -140,7 +140,7 @@ function renderProjects() {
         <div class="proj-tags">${(p.tags||[]).map(t=>`<span class="tag">${escHtml(t)}</span>`).join('')}</div>
         <div class="proj-actions">
           ${p.githubUrl?`<a href="${p.githubUrl}" target="_blank" rel="noopener" class="pbtn-gh" onclick="event.stopPropagation()">↗ GitHub</a>`:''}
-          <button class="pBtn-detail" onclick="event.stopPropagation();window.location='pages/project.html?id=${p.id}'">Détails →</button>
+          <button class="pBtn-detail" onclick="event.stopPropagation();window.location='/Portfolio/pages/project.html?id=${p.id}'">Détails →</button>
         </div>
         <div class="interact-bar" onclick="event.stopPropagation()">
           <button class="like-btn${Store.hasLiked(p.id)?' liked':''}" onclick="toggleLike('${p.id}',this)">
@@ -198,7 +198,7 @@ function renderBlog(filter='all'){
   const filtered=filter==='all'?posts:posts.filter(p=>p.type===filter);
   if(!filtered.length){grid.innerHTML='<p style="color:var(--txt3);font-family:var(--mono);font-size:.8rem">// Aucun article publié.</p>';return;}
   grid.innerHTML=filtered.map(p=>`
-    <div class="blog-card reveal" onclick="window.location='pages/post.html?id=${p.id}'">
+    <div class="blog-card reveal" onclick="window.location='/Portfolio/pages/post.html?id=${p.id}'">
       <div class="blog-top"><span class="blog-type ${p.type}">${p.type==='writeup'?'Writeup CTF':'Article'}</span><span class="blog-date">${fmtDate(p.createdAt)}</span></div>
       <div class="blog-emoji">${p.coverEmoji||'📄'}</div>
       <h3 class="blog-title">${escHtml(p.title)}</h3>
