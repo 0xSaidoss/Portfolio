@@ -928,7 +928,7 @@ function deleteItem(kind, id) {
 }
 
 function previewItem(kind, id) {
-  const url = kind === 'project' ? `/pages/project.html?id=${id}` : `/pages/post.html?id=${id}`;
+  const url = kind === 'project' ? `/Portfolio/pages/project.html?id=${id}` : `/Portfolio/pages/post.html?id=${id}`;
   window.open(url, '_blank');
 }
 
