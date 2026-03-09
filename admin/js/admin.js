@@ -133,7 +133,7 @@ function viewDashboard() {
   return `
   <div class="view-header">
     <div><p class="view-title">Dashboard</p><p class="view-subtitle">// Vue d'ensemble du contenu</p></div>
-    <a href="/Portfolio/index.html" target="_blank" class="btn btn-ghost btn-sm">↗ Voir le site</a>
+    <a href="/Portfolio/" target="_blank" class="btn btn-ghost btn-sm">↗ Voir le site</a>
   </div>
 
   <p class="dash-recent-title" style="margin-bottom:.75rem">// Visites</p>
