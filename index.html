@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="description" content="Diallo Mouhamadou Saidou (0xSaidoss) — Étudiant BTS Réseaux & Cybersécurité. Binary Exploitation, Reverse Engineering, SOC Labs, CTF Player. Abidjan, Côte d'Ivoire."/>
+  <title>0xSaidoss | Cybersecurity Portfolio</title>
+  <link rel="stylesheet" href="css/theme.css"/>
+  <link rel="stylesheet" href="css/index.css"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%23050a0e' width='32' height='32'/><text y='24' font-size='22' fill='%2300d4ff'>⬡</text></svg>"/>
+  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+</head>
+<body>
+
+<nav class="nav" id="nav">
+  <a href="index.html" class="nav-logo"><span class="br">[</span>0xSaidoss<span class="br">]</span></a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="#hero" class="active">Home</a></li>
+    <li><a href="#about">About</a></li>
+    <li><a href="#skills">Skills</a></li>
+    <li><a href="#projects">Projets</a></li>
+    <li><a href="#blog">Writeups</a></li>
+    <li><a href="#contact">Contact</a></li>
+  </ul>
+  <button class="nav-admin-btn" onclick="window.location='admin/index.html'">⬡ Admin</button>
+  <button class="nav-hamburger" id="ham" aria-label="Menu"><span></span><span></span><span></span></button>
+</nav>
+
+<!-- HERO -->
+<section id="hero" class="hero-section">
+  <canvas id="matrixCanvas" aria-hidden="true"></canvas>
+  <div class="hero-grid" aria-hidden="true"></div>
+  <div class="hero-content">
+    <p class="hero-eyebrow"><span class="sdot"></span> Disponible pour stage — Analyste Cybersécurité</p>
+    <h1 class="hero-name">
+      <span class="line1">Mouhamadou</span>
+      <span class="line2">Saidou</span>
+    </h1>
+    <p class="hero-role"><span id="typingText">Binary Exploitation</span><span class="cursor-pipe">|</span></p>
+    <p class="hero-bio">Passionné d'Exploitation Binaire &amp; Reverse Engineering · Futur Analyste Cybersécurité · SOC Labs (Suricata, Wazuh, GNS3) · CTF Player 100+ THM · 15+ Root-Me · Abidjan, Côte d'Ivoire.</p>
+    <div class="hero-btns">
+      <a href="#projects" class="btn btn-cyan">⬡ Voir les projets</a>
+      <a href="#blog" class="btn btn-ghost">→ Writeups CTF</a>
+    </div>
+  </div>
+  <div class="hero-stats">
+    <div class="stat"><span class="snum" data-target="100">0</span><span class="slbl">Machines THM</span></div>
+    <div class="stat"><span class="snum" data-target="15">0</span><span class="slbl">Root-Me BinExp</span></div>
+    <div class="stat"><span class="snum" data-target="5">0</span><span class="slbl">Projets Labs</span></div>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section id="about" class="section">
+  <div class="section-header reveal">
+    <p class="s-tag">01 / À propos</p>
+    <h2 class="s-title">Qui <span class="ac">Suis-Je</span></h2>
+    <div class="s-divider"></div>
+  </div>
+  <div class="about-grid">
+    <div class="about-terminal reveal delay-1">
+      <div class="term-hdr"><span class="dot r"></span><span class="dot a"></span><span class="dot g"></span><span class="term-name">bash — 0xSaidoss@kali</span></div>
+      <div class="term-body">
+        <div class="tl"><span class="p">~/</span><span class="c">whoami</span></div>
+        <div class="to">diallo_mouhamadou_saidou</div>
+        <div class="tl mt"><span class="p">~/</span><span class="c">cat alias.txt</span></div>
+        <div class="to">→ <span class="hi">0xSaidoss</span></div>
+        <div class="tl mt"><span class="p">~/</span><span class="c">cat focus.txt</span></div>
+        <div class="to">→ <span class="hi">Binary Exploitation</span></div>
+        <div class="to">→ <span class="hi">Reverse Engineering</span></div>
+        <div class="to">→ <span class="hi">SOC / Détection d'intrusions</span></div>
+        <div class="to">→ <span class="hi">Administration Réseau</span></div>
+        <div class="tl mt"><span class="p">~/</span><span class="c">cat platforms.txt</span></div>
+        <div class="to">→ TryHackMe : <span class="hi">0xSaidoss</span> · 100+ machines</div>
+        <div class="to">→ Root-Me PRO : <span class="hi">15+ BinExp solves</span></div>
+        <div class="tl mt"><span class="p">~/</span><span class="c">cat location.txt</span></div>
+        <div class="to">Marcory, <span class="hi">Abidjan</span>, Côte d'Ivoire</div>
+        <div class="tl mt"><span class="p">~/</span><span class="c">█<span class="term-cursor"></span></span></div>
+      </div>
+    </div>
+    <div class="about-text-col reveal delay-2">
+      <h3 class="about-sub">// Biographie</h3>
+      <p>J'ai découvert la cybersécurité en classe de <strong>première</strong>, sans ordinateur, en apprenant depuis des vidéos et de la documentation. Après mon bac (Série D, Assez Bien), je me suis inscrit en <strong>BTS Réseaux &amp; Télécommunications à HEGES (Marcory)</strong>.</p>
+      <p style="margin-top:.75rem">Le <strong>7 décembre 2024</strong>, j'ai eu mon premier PC et installé immédiatement Kali Linux. J'ai rejoint TryHackMe sous <strong>0xSaidoss</strong> et c'est là que j'ai découvert ma vraie passion : la <strong>Binary Exploitation</strong> et le <strong>Reverse Engineering</strong>. J'apprends le C depuis "The C Programming Language" et pratique sur Root-Me PRO.</p>
+      <p style="margin-top:.75rem">En décembre 2025, j'ai rejoint <strong>We.Code</strong> — programme GIZ / EPITECH / M-Studio — en parallèle de mon BTS.</p>
+
+      <h3 class="about-sub" style="margin-top:1.5rem">// Formation</h3>
+      <div class="edu-list">
+        <div class="edu-item"><span class="edu-yr">Janv. 2026 – Juil. 2026</span><strong>Analyste Cybersécurité — We.Code</strong><span>Programme GIZ / EPITECH / M-Studio · Sécurité numérique pratique</span></div>
+        <div class="edu-item"><span class="edu-yr">Oct. 2024 – Juil. 2026</span><strong>BTS Réseaux Informatiques &amp; Télécommunications</strong><span>HEGES — Hautes Études en Gestion, Banque et Assurance · Marcory, Abidjan</span></div>
+        <div class="edu-item"><span class="edu-yr">Mars 2025</span><strong>Attestation — Fibre Optique</strong><span>Formation pratique · HEGES-Marcory</span></div>
+        <div class="edu-item"><span class="edu-yr">Oct. 2023 – Juin 2024</span><strong>Baccalauréat Série D — Assez Bien</strong><span>Lycée Moderne de Kokumbo · Toumodi</span></div>
+      </div>
+
+      <h3 class="about-sub" style="margin-top:1.5rem">// Expérience</h3>
+      <div class="edu-list">
+        <div class="edu-item"><span class="edu-yr">Juil. 2025 – Aujourd'hui</span><strong>CTF — Root-Me PRO</strong><span>Contrat en alternance · Binary Exploitation, Architecture x86/x64, Heap, Format String · À distance</span></div>
+        <div class="edu-item"><span class="edu-yr">Déc. 2024 – Aujourd'hui</span><strong>CTF — TryHackMe</strong><span>Contrat en alternance · Sécurité réseau, Kali Linux, 100+ machines · À distance</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SKILLS -->
+<section id="skills" class="section" style="background:var(--bg2);max-width:100%;padding-left:clamp(1rem,4vw,3rem);padding-right:clamp(1rem,4vw,3rem)">
+  <div style="max-width:1200px;margin:0 auto">
+    <div class="section-header reveal">
+      <p class="s-tag">02 / Compétences</p>
+      <h2 class="s-title">Arsenal <span class="ac">Technique</span></h2>
+      <div class="s-divider"></div>
+    </div>
+    <div class="skills-grid reveal" id="arsenalGrid">
+
+      <div class="skill-cat">
+        <div class="skill-cat-hdr"><span class="skill-ico">💀</span><span class="skill-cat-name">Binary Exploitation &amp; RE</span></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">Binary Exploitation (C)</span><span class="skill-p">80%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="80"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">Reverse Engineering</span><span class="skill-p">72%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="72"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">Langage C</span><span class="skill-p">68%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="68"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">GHIDRA / IDA / GDB-GEF</span><span class="skill-p">74%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="74"></div></div></div>
+        <div class="skill-tags"><span class="tag">Stack Overflow</span><span class="tag">Heap</span><span class="tag">Format String</span><span class="tag">AV Bypass</span><span class="tag">ELF x86/x64</span><span class="tag">Race Condition</span></div>
+      </div>
+
+      <div class="skill-cat">
+        <div class="skill-cat-hdr"><span class="skill-ico">🌐</span><span class="skill-cat-name">Réseaux</span></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">TCP/IP, DHCP, DNS, NAT, IPV6</span><span class="skill-p">85%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="85"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">OSPF, EIGRP, RIPV2</span><span class="skill-p">80%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="80"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">VLAN, Routing, Switching</span><span class="skill-p">82%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="82"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">GNS3 (Simulation)</span><span class="skill-p">85%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="85"></div></div></div>
+        <div class="skill-tags"><span class="tag">GNS3</span><span class="tag">OpenVPN</span><span class="tag">Fibre Optique</span><span class="tag">Windows Server</span></div>
+      </div>
+
+      <div class="skill-cat">
+        <div class="skill-cat-hdr"><span class="skill-ico">🛡️</span><span class="skill-cat-name">SOC &amp; Défense</span></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">Suricata IDS/IPS</span><span class="skill-p">78%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="78"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">Wazuh SIEM</span><span class="skill-p">75%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="75"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">Firewalls / UFW / IPTables</span><span class="skill-p">78%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="78"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">Détection des menaces</span><span class="skill-p">76%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="76"></div></div></div>
+        <div class="skill-tags"><span class="tag">Suricata</span><span class="tag">Wazuh</span><span class="tag">Nmap</span><span class="tag">Burp Suite</span><span class="tag">John the Ripper</span></div>
+      </div>
+
+      <div class="skill-cat">
+        <div class="skill-cat-hdr"><span class="skill-ico">🐧</span><span class="skill-cat-name">Linux &amp; Scripting</span></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">Kali Linux</span><span class="skill-p">88%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="88"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">Ubuntu / CentOS</span><span class="skill-p">82%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="82"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">Bash Scripting</span><span class="skill-p">78%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="78"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">Python</span><span class="skill-p">70%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="70"></div></div></div>
+        <div class="skill-tags"><span class="tag">Kali</span><span class="tag">Ubuntu</span><span class="tag">VMware</span><span class="tag">MySQL</span><span class="tag">SQLite3</span></div>
+      </div>
+
+      <div class="skill-cat">
+        <div class="skill-cat-hdr"><span class="skill-ico">🚩</span><span class="skill-cat-name">Web &amp; CTF</span></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">OWASP Top 10</span><span class="skill-p">75%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="75"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">Sécurité Web</span><span class="skill-p">72%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="72"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">Privilege Escalation</span><span class="skill-p">82%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="82"></div></div></div>
+        <div class="skill-item"><div class="skill-meta"><span class="skill-n">SQL (MySQL, SQLite3)</span><span class="skill-p">68%</span></div><div class="skill-bar"><div class="skill-fill" data-pct="68"></div></div></div>
+        <div class="skill-tags"><span class="tag">TryHackMe</span><span class="tag">Root-Me</span><span class="tag">SQLi</span><span class="tag">XSS</span><span class="tag">SSRF</span></div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- PROJECTS (dynamic) -->
+<section id="projects" class="section">
+  <div class="section-header reveal">
+    <p class="s-tag">03 / Projets</p>
+    <h2 class="s-title">Projets <span class="ac">Réalisés</span></h2>
+    <div class="s-divider"></div>
+  </div>
+  <div class="filter-bar reveal" id="projectFilter">
+    <button class="fbtn active" data-f="all">Tous</button>
+    <button class="fbtn" data-f="lab">Labs</button>
+    <button class="fbtn" data-f="network">Réseau</button>
+    <button class="fbtn" data-f="tool">Outils</button>
+    <button class="fbtn" data-f="ctf">CTF</button>
+  </div>
+  <div class="grid-auto reveal" id="projectsGrid"></div>
+</section>
+
+<!-- BLOG (dynamic) -->
+<section id="blog" class="section" style="background:var(--bg2);max-width:100%;padding-left:clamp(1rem,4vw,3rem);padding-right:clamp(1rem,4vw,3rem)">
+  <div style="max-width:1200px;margin:0 auto">
+    <div class="section-header reveal">
+      <p class="s-tag">04 / Blog</p>
+      <h2 class="s-title">Articles &amp; <span class="ac">Writeups</span></h2>
+      <div class="s-divider"></div>
+    </div>
+    <div class="tab-bar reveal">
+      <button class="tab active" data-tab="all">Tout</button>
+      <button class="tab" data-tab="article">Articles</button>
+      <button class="tab" data-tab="writeup">Writeups CTF</button>
+    </div>
+    <div class="grid-auto reveal" id="blogGrid"></div>
+  </div>
+</section>
+
+<!-- CONTACT -->
+<section id="contact" class="section">
+  <div class="section-header reveal">
+    <p class="s-tag">05 / Contact</p>
+    <h2 class="s-title">Me <span class="ac">Contacter</span></h2>
+    <div class="s-divider"></div>
+  </div>
+  <div class="contact-grid">
+    <div class="reveal">
+      <p style="color:var(--txt2);font-size:.95rem;line-height:1.8;margin-bottom:1.5rem">Je suis à la recherche d'un <strong style="color:var(--cyan)">stage en analyste cybersécurité</strong>. N'hésitez pas à me contacter pour toute opportunité ou collaboration.</p>
+      <div class="contact-links">
+        <a href="https://www.linkedin.com/in/diallo-saidou/" target="_blank" rel="noopener" class="clink"><span class="ci">in</span> linkedin.com/in/diallo-saidou</a>
+        <a href="https://tryhackme.com/p/0xSaidoss" target="_blank" rel="noopener" class="clink"><span class="ci">🚩</span> TryHackMe — 0xSaidoss</a>
+        <a href="https://www.root-me.org/" target="_blank" rel="noopener" class="clink"><span class="ci">💀</span> Root-Me PRO</a>
+        <a href="mailto:msaidou02.diallo@gmail.com" class="clink"><span class="ci">@</span> msaidou02.diallo@gmail.com</a>
+        <a href="tel:+2250703834564" class="clink"><span class="ci">📞</span> +225 07 03 83 45 64</a>
+      </div>
+    </div>
+    <form id="contactForm" class="contact-form reveal delay-1" novalidate>
+      <div class="field"><label class="label" for="cname">Nom</label><input id="cname" class="input" placeholder="Votre nom" type="text" required/></div>
+      <div class="field"><label class="label" for="cemail">Email</label><input id="cemail" class="input" placeholder="votre@email.com" type="email" required/></div>
+      <div class="field"><label class="label" for="cmsg">Message</label><textarea id="cmsg" class="textarea" placeholder="Opportunité de stage, collaboration..." required></textarea></div>
+      <button type="submit" class="btn btn-cyan" style="width:100%;justify-content:center">⬡ Envoyer</button>
+    </form>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-logo">[ 0xSaidoss ]</div>
+  <p class="footer-copy">Diallo Mouhamadou Saidou &copy; 2025 &middot; Abidjan, Côte d'Ivoire</p>
+  <nav class="footer-links">
+    <a href="#hero">Home</a>
+    <a href="#projects">Projets</a>
+    <a href="#blog">Writeups</a>
+    <a href="admin/index.html">Admin</a>
+  </nav>
+</footer>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-follower" id="cursorFollower"></div>
+<div class="toast" id="toast"></div>
+<script src="js/store.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

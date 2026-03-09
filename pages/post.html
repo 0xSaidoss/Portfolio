@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Article | 0xSaidoss</title>
+  <link rel="stylesheet" href="/css/theme.css"/>
+  <link rel="stylesheet" href="/css/content.css"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%23050a0e' width='32' height='32'/><text y='24' font-size='22' fill='%2300d4ff'>⬡</text></svg>"/>
+</head>
+<body>
+<nav class="nav" id="nav">
+  <a href="/index.html" class="nav-logo"><span class="br">[</span>0xSaidoss<span class="br">]</span></a>
+  <ul class="nav-links" id="navLinks">
+    <li><a href="/index.html">Home</a></li>
+    <li><a href="/index.html#blog" class="active">Articles</a></li>
+    <li><a href="/index.html#contact">Contact</a></li>
+  </ul>
+  <button class="nav-admin-btn" onclick="window.location='/admin/index.html'">⬡ Admin</button>
+  <button class="nav-hamburger" id="ham"><span></span><span></span><span></span></button>
+</nav>
+
+<div id="pageContent" style="padding-top:var(--nav)"></div>
+<div id="interactSection" style="max-width:820px;margin:0 auto;padding:0 clamp(1rem,4vw,2rem) 4rem"></div>
+
+<footer>
+  <div class="footer-logo">[ 0xSaidoss ]</div>
+  <p class="footer-copy">Diallo Mouhamadou Saidou © 2025</p>
+  <nav class="footer-links"><a href="/index.html">Home</a><a href="/index.html#blog">Blog</a></nav>
+</footer>
+<div class="cursor" id="cursor"></div>
+<div class="cursor-follower" id="cursorFollower"></div>
+<div class="toast" id="toast"></div>
+
+<script src="/js/store.js"></script>
+<script src="/js/main.js"></script>
+<script>
+  const id = new URLSearchParams(location.search).get('id');
+  const p  = id ? Store.getPost(id) : null;
+  const el = document.getElementById('pageContent');
+
+  if (!p) {
+    el.innerHTML = `<div class="section"><p style="color:var(--red);font-family:var(--mono)">// Article introuvable.</p><a href="/index.html" class="btn btn-ghost" style="margin-top:1rem">← Retour</a></div>`;
+  } else {
+    document.title = `${p.title} | 0xSaidoss`;
+    const typeLabel = p.type === 'writeup' ? 'Writeup CTF' : 'Article';
+    const typeColor = p.type === 'writeup' ? 'var(--red)' : 'var(--cyan)';
+    el.innerHTML = `
+    <div class="content-page">
+      <div class="content-hero">
+        <div class="ch-inner">
+          <a href="/index.html#blog" class="back-link">← Retour au blog</a>
+          <div class="ch-meta">
+            <span style="font-family:var(--mono);font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:${typeColor}">${typeLabel}</span>
+            <span style="font-family:var(--mono);font-size:.7rem;color:var(--txt3)">${new Date(p.createdAt).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</span>
+          </div>
+          <h1 class="ch-title">${esc(p.title)}</h1>
+          <p class="ch-excerpt">${esc(p.excerpt||'')}</p>
+          <div class="ch-tags">${(p.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
+        </div>
+        <div class="ch-emoji">${p.coverEmoji||'📄'}</div>
+      </div>
+      <div class="content-body">
+        <div class="content-blocks">${Store.renderBlocks(p.content||[])}</div>
+      </div>
+    </div>`;
+
+    renderComments(p.id, 'interactSection');
+  }
+  function esc(s=''){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+</script>
+</body>
+</html>

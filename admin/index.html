@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Admin — Portfolio CMS</title>
+  <link rel="stylesheet" href="/css/theme.css"/>
+  <link rel="stylesheet" href="/admin/css/admin.css"/>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%23050a0e' width='32' height='32'/><text y='24' font-size='22' fill='%2300d4ff'>⬡</text></svg>"/>
+  <style>
+    /* Override: admin page must always show system cursor */
+    html, body, *, *::before, *::after { cursor: auto !important; }
+    button, a, .snav-btn, .btn, select, label[for] { cursor: pointer !important; }
+    input, textarea { cursor: text !important; }
+    .block-drag { cursor: grab !important; }
+  </style>
+</head>
+<body class="admin-page">
+
+<!-- LOGIN MODAL -->
+<div class="modal-overlay open" id="loginModal">
+  <div class="modal">
+    <h2>// Accès Admin</h2>
+    <p style="font-family:var(--mono);font-size:.75rem;color:var(--txt3);margin-bottom:1.5rem">Mot de passe par défaut : <span style="color:var(--amber)">cyber2024</span></p>
+    <div class="field" style="margin-bottom:1rem">
+      <label class="label">Mot de passe</label>
+      <input id="loginInput" class="input" type="password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+    <div id="loginError" style="font-family:var(--mono);font-size:.72rem;color:var(--red);margin-bottom:1rem;display:none">// Mot de passe incorrect.</div>
+    <button class="btn btn-cyan" style="width:100%;justify-content:center" id="loginBtn">Connexion →</button>
+  </div>
+</div>
+
+<!-- ADMIN SHELL (hidden until login) -->
+<div id="adminShell" style="display:none">
+  <aside class="admin-sidebar" id="sidebar">
+    <div class="sidebar-logo"><span class="br">[</span>AC<span class="br">]</span><span class="sidebar-tag">Admin</span></div>
+    <nav class="sidebar-nav">
+      <button class="snav-btn active" data-view="dashboard">📊 Dashboard</button>
+      <button class="snav-btn" data-view="projects">🗂️ Projets</button>
+      <button class="snav-btn" data-view="posts">📝 Articles & Writeups</button>
+      <button class="snav-btn" data-view="arsenal">⚔️ Arsenal</button>
+      <button class="snav-btn" data-view="comments">💬 Commentaires</button>
+      <button class="snav-btn" data-view="settings" style="margin-top:auto">⚙️ Paramètres</button>
+    </nav>
+    <button class="logout-btn" id="logoutBtn">↩ Déconnexion</button>
+  </aside>
+  <main class="admin-main" id="adminMain"></main>
+</div>
+
+<!-- EDITOR MODAL (projets / articles) -->
+<div class="modal-overlay" id="editorModal">
+  <div class="modal editor-modal" id="editorInner"></div>
+</div>
+
+<!-- ARSENAL MODAL -->
+<div class="modal-overlay" id="arsenalModal">
+  <div class="modal" style="max-width:560px;max-height:90vh;overflow-y:auto" id="arsenalInner"></div>
+</div>
+
+<!-- BLOCK PICKER MODAL -->
+<div class="modal-overlay" id="blockPickerModal">
+  <div class="modal" style="max-width:520px">
+    <h2>// Ajouter un bloc</h2>
+    <div class="block-picker-grid" id="blockPickerGrid"></div>
+    <button class="btn btn-ghost" style="margin-top:1rem;width:100%;justify-content:center" onclick="closeModal('blockPickerModal')">Annuler</button>
+  </div>
+</div>
+
+<!-- IMAGE MODAL -->
+<div class="modal-overlay" id="imageModal">
+  <div class="modal" style="max-width:560px">
+    <h2>// Insérer une image</h2>
+    <div class="field" style="margin-bottom:.75rem">
+      <label class="label">Depuis un fichier</label>
+      <input type="file" id="imgFileInput" accept="image/*" class="input" style="padding:.4rem"/>
+    </div>
+    <div style="font-family:var(--mono);font-size:.7rem;color:var(--txt3);margin-bottom:.75rem">— ou —</div>
+    <div class="field" style="margin-bottom:.75rem">
+      <label class="label">URL d'image</label>
+      <input type="url" id="imgUrlInput" class="input" placeholder="https://..."/>
+    </div>
+    <div class="field" style="margin-bottom:1rem">
+      <label class="label">Légende (optionnel)</label>
+      <input type="text" id="imgCaption" class="input" placeholder="Description de l'image"/>
+    </div>
+    <div id="imgPreview" style="margin-bottom:1rem"></div>
+    <div style="display:flex;gap:.75rem">
+      <button class="btn btn-cyan" style="flex:1;justify-content:center" id="imgConfirmBtn">Insérer</button>
+      <button class="btn btn-ghost" style="flex:1;justify-content:center" onclick="closeModal('imageModal')">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="/js/store.js"></script>
+<script src="/admin/js/admin.js"></script>
+</body>
+</html>
