@@ -38,6 +38,10 @@ document.addEventListener('DOMContentLoaded', () => {
     Store.onArsenalChange(cats => {
       renderArsenalData(cats);
     });
+    Store.onProfileChange(profile => {
+      renderAbout(profile);
+      updateHeroTitles(profile.titles);
+    });
     // Enregistre la visite (admin exclu)
     Store.recordVisit && Store.recordVisit().catch(() => {});
   });
@@ -81,26 +85,158 @@ function initNav() {
   links?.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>links.classList.remove('open')));
 }
 
-/* ── MATRIX ── */
+/* ── HERO BACKGROUND — vidéo + canvas cyber animation ── */
 function initMatrix() {
-  const c=document.getElementById('matrixCanvas');
-  if(!c)return;
-  const ctx=c.getContext('2d');
-  const resize=()=>{c.width=innerWidth;c.height=innerHeight;};
-  resize();window.addEventListener('resize',resize,{passive:true});
-  const chars='アイウエオ0123456789ABCDEF<>{}[]|/\\';
-  const fs=13;let cols,drops;
-  const reset=()=>{cols=Math.floor(c.width/fs);drops=Array(cols).fill(1);};
-  reset();window.addEventListener('resize',reset,{passive:true});
-  setInterval(()=>{
-    ctx.fillStyle='rgba(5,10,14,.05)';ctx.fillRect(0,0,c.width,c.height);
-    ctx.font=`${fs}px Share Tech Mono,monospace`;
-    drops.forEach((y,i)=>{
-      ctx.fillStyle=`rgba(0,255,136,${Math.random()>.9?1:.4})`;
-      ctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*fs,y*fs);
-      if(y*fs>c.height&&Math.random()>.975)drops[i]=0;drops[i]++;
+  initHeroVideo();
+  initHeroCanvas();
+}
+
+function initHeroVideo() {
+  const video = document.getElementById('heroBgVideo');
+  if (!video) return;
+
+  // Si la vidéo charge → elle est visible, sinon le canvas prend le relais
+  video.addEventListener('loadeddata', () => {
+    video.style.opacity = '1';
+  });
+  video.addEventListener('error', () => {
+    video.style.display = 'none'; // canvas seul
+  });
+
+  // Timeout : si pas chargée en 4s → cache la vidéo
+  setTimeout(() => {
+    if (video.readyState < 2) video.style.display = 'none';
+  }, 4000);
+}
+
+function initHeroCanvas() {
+  const canvas = document.getElementById('heroBgCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  const resize = () => {
+    W = canvas.width  = innerWidth;
+    H = canvas.height = innerHeight;
+  };
+  resize();
+  window.addEventListener('resize', resize, {passive:true});
+
+  /* ── Éléments visuels ── */
+  const ACCENT  = '79,156,249';
+  const GREEN   = '34,197,94';
+  const PURPLE  = '167,139,250';
+
+  // 1. Particules flottantes connectées
+  const pts = Array.from({length:60}, () => ({
+    x: Math.random()*W, y: Math.random()*H,
+    r: Math.random()*.9+.2,
+    vx: (Math.random()-.5)*.18,
+    vy: (Math.random()-.5)*.18,
+    a: Math.random()*.35+.08,
+  }));
+
+  // 2. Lignes de données verticales (style matrix mais discret)
+  const COLS = Math.floor(W / 22);
+  const drops = Array.from({length:COLS}, () => ({
+    y: Math.random()*H,
+    speed: Math.random()*1.2+.4,
+    alpha: Math.random()*.18+.04,
+    char: '',
+    timer: 0,
+  }));
+  const CHARS = '01アイウエ∑∆∏∂∇⊕⊗⟨⟩{}[]<>/\\|';
+
+  // 3. Nœuds de réseau (hexagones)
+  const NODES = Array.from({length:8}, () => ({
+    x: Math.random()*W, y: Math.random()*H,
+    r: Math.random()*30+18,
+    pulse: Math.random()*Math.PI*2,
+    speed: Math.random()*.012+.006,
+    color: [ACCENT, GREEN, PURPLE][Math.floor(Math.random()*3)],
+  }));
+
+  function hexagon(cx, cy, r) {
+    ctx.beginPath();
+    for (let i=0; i<6; i++) {
+      const a = (Math.PI/3)*i - Math.PI/6;
+      i===0 ? ctx.moveTo(cx+r*Math.cos(a), cy+r*Math.sin(a))
+             : ctx.lineTo(cx+r*Math.cos(a), cy+r*Math.sin(a));
+    }
+    ctx.closePath();
+  }
+
+  let frame = 0;
+  function draw() {
+    frame++;
+    // Fond semi-transparent pour trail effect
+    ctx.fillStyle = 'rgba(8,12,16,.18)';
+    ctx.fillRect(0, 0, W, H);
+
+    // ── Hexagones pulsants ──
+    NODES.forEach(n => {
+      n.pulse += n.speed;
+      const scale = 1 + Math.sin(n.pulse) * .12;
+      const a = (Math.sin(n.pulse) * .5 + .5) * .06 + .02;
+      hexagon(n.x, n.y, n.r * scale);
+      ctx.strokeStyle = `rgba(${n.color},${a + .04})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      // Halo intérieur
+      hexagon(n.x, n.y, (n.r * scale) * .55);
+      ctx.strokeStyle = `rgba(${n.color},${a * .5})`;
+      ctx.lineWidth = .5;
+      ctx.stroke();
     });
-  },65);
+
+    // ── Colonnes de données (style matrix discret) ──
+    ctx.font = '11px JetBrains Mono, monospace';
+    drops.forEach((d, i) => {
+      d.timer++;
+      if (d.timer % 4 === 0) d.char = CHARS[Math.floor(Math.random()*CHARS.length)];
+      ctx.fillStyle = `rgba(${ACCENT},${d.alpha})`;
+      ctx.fillText(d.char, i*22, d.y);
+      d.y += d.speed;
+      if (d.y > H) { d.y = -12; d.alpha = Math.random()*.18+.04; }
+    });
+
+    // ── Particules connectées ──
+    pts.forEach((p, i) => {
+      // Connexions
+      for (let j = i+1; j < pts.length; j++) {
+        const dx = pts[i].x-pts[j].x, dy = pts[i].y-pts[j].y;
+        const dist = Math.sqrt(dx*dx+dy*dy);
+        if (dist < 110) {
+          ctx.beginPath();
+          ctx.strokeStyle = `rgba(${ACCENT},${(1-dist/110)*.07})`;
+          ctx.lineWidth = .4;
+          ctx.moveTo(pts[i].x, pts[i].y);
+          ctx.lineTo(pts[j].x, pts[j].y);
+          ctx.stroke();
+        }
+      }
+      // Point
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(${ACCENT},${p.a})`;
+      ctx.fill();
+      p.x += p.vx; p.y += p.vy;
+      if (p.x<-5) p.x=W+5; if (p.x>W+5) p.x=-5;
+      if (p.y<-5) p.y=H+5; if (p.y>H+5) p.y=-5;
+    });
+
+    // ── Scan line animée (subtile) ──
+    const scanY = (frame * .4) % (H + 60) - 30;
+    const grad = ctx.createLinearGradient(0, scanY-30, 0, scanY+30);
+    grad.addColorStop(0, 'rgba(79,156,249,0)');
+    grad.addColorStop(.5, 'rgba(79,156,249,.04)');
+    grad.addColorStop(1, 'rgba(79,156,249,0)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, scanY-30, W, 60);
+
+    requestAnimationFrame(draw);
+  }
+  draw();
 }
 
 /* ── REVEAL ── */
@@ -131,15 +267,80 @@ function initTyping() {
   if(!el)return;
   const phrases=['Binary Exploitation','Reverse Engineering','SOC Analyst','CTF Player / 0xSaidoss','Futur Analyste Cyber'];
   let pi=0,ci=0,del=false;
+  // Applique la couleur de la phrase courante
+  const applyColor = () => {
+    el.className = 'color-' + pi;
+  };
+  applyColor();
   const run=()=>{
     const phrase=phrases[pi];
     el.textContent=del?phrase.slice(0,ci--):phrase.slice(0,ci++);
-    let d=del?50:90;
+    let d=del?48:88;
     if(!del&&ci>phrase.length){d=1800;del=true;}
-    else if(del&&ci<0){del=false;pi=(pi+1)%phrases.length;ci=0;d=400;}
+    else if(del&&ci<0){
+      del=false;
+      pi=(pi+1)%phrases.length;
+      ci=0; d=380;
+      applyColor();
+    }
     setTimeout(run,d);
   };
-  setTimeout(run,1500);
+  setTimeout(run,1200);
+}
+
+
+/* ── RENDER ABOUT (dynamic from Firestore) ── */
+function updateHeroTitles(titles) {
+  if (!titles || !titles.length) return;
+  // Met à jour le tableau des phrases du typing effect
+  window._heroTitles = titles;
+}
+
+function renderAbout(profile) {
+  if (!profile) return;
+
+  // Bio paragraphs
+  const bioEl = document.getElementById('aboutBio');
+  if (bioEl && profile.bio) {
+    bioEl.innerHTML = profile.bio.map(p =>
+      `<p>${parseInlineBio(p)}</p>`
+    ).join('');
+  }
+
+  // Formation
+  const formEl = document.getElementById('aboutFormation');
+  if (formEl && profile.formation) {
+    formEl.innerHTML = profile.formation.map(f => `
+      <div class="edu-item">
+        <span class="edu-yr">${escHtml(f.period)}</span>
+        <strong>${escHtml(f.title)}</strong>
+        <span>${escHtml(f.sub)}</span>
+      </div>`).join('');
+  }
+
+  // Experience
+  const expEl = document.getElementById('aboutExperience');
+  if (expEl && profile.experience) {
+    expEl.innerHTML = profile.experience.map(e => `
+      <div class="edu-item">
+        <span class="edu-yr">${escHtml(e.period)}</span>
+        <strong>${escHtml(e.title)}</strong>
+        <span>${escHtml(e.sub)}</span>
+      </div>`).join('');
+  }
+
+  // Terminal focus lines
+  const focusEl = document.getElementById('termFocus');
+  if (focusEl && profile.titles) {
+    focusEl.innerHTML = profile.titles.slice(0,4).map(t =>
+      `<div class="to">→ <span class="hi">${escHtml(t)}</span></div>`
+    ).join('');
+  }
+}
+
+// Mini inline markdown pour la bio (bold only)
+function parseInlineBio(s='') {
+  return escHtml(s).replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>');
 }
 
 /* ── RENDER PROJECTS (realtime) ── */
@@ -288,53 +489,133 @@ function initContact() {
 
 /* ── COMMENTS (async) ── */
 async function renderComments(projectId, containerId) {
-  const container=document.getElementById(containerId);
-  if(!container)return;
-  container.innerHTML=`<div class="fb-loading"><span class="fb-spinner"></span> Chargement...</div>`;
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = `<div class="fb-loading"><span class="fb-spinner"></span> Chargement...</div>`;
+
   const [comments, likeCount, liked] = await Promise.all([
     Store.getComments(projectId),
     Store.getLikes(projectId),
     Store.hasLiked(projectId),
   ]);
-  container.innerHTML=`
+
+  const totalReplies = comments.reduce((acc,c)=>acc+(c.replies||[]).length,0);
+  const totalCount   = comments.length + totalReplies;
+
+  container.innerHTML = `
     <div class="interact-bar">
       <button class="like-btn${liked?' liked':''}" id="detailLikeBtn" onclick="toggleLikeDetail('${projectId}')">
         <span class="heart">♥</span> <span class="like-count">${likeCount}</span>&nbsp;J'aime
       </button>
     </div>
     <div class="comments-section">
-      <h3>// Commentaires (${comments.length})</h3>
-      <form class="comment-form" onsubmit="submitComment(event,'${projectId}','${containerId}')">
+      <h3>Commentaires <span class="comments-count">${totalCount}</span></h3>
+
+      <form class="comment-form" id="mainCommentForm_${projectId}"
+            onsubmit="submitComment(event,'${projectId}','${containerId}')">
         <div class="comment-form-row">
-          <input type="text" id="commentName" placeholder="Ton pseudo" required maxlength="50"/>
-          <input type="email" id="commentEmail" placeholder="Email (optionnel)" maxlength="100"/>
+          <input type="text"  id="commentName_${projectId}"  placeholder="Ton pseudo"        required maxlength="50"/>
+          <input type="email" id="commentEmail_${projectId}" placeholder="Email (optionnel)"  maxlength="100"/>
         </div>
-        <textarea id="commentText" placeholder="Ton commentaire..." required maxlength="1000"></textarea>
-        <button type="submit" class="comment-submit">⬡ Commenter</button>
+        <textarea id="commentText_${projectId}" placeholder="Écris ton commentaire..." required maxlength="1000"></textarea>
+        <button type="submit" class="comment-submit">Commenter</button>
       </form>
-      <div class="comment-list">
-        ${comments.length?comments.map(c=>`
-          <div class="comment-item">
-            <div class="comment-meta">
-              <span class="comment-author">${escHtml(c.author)}</span>
-              <span class="comment-date">${fmtDate(c.createdAt)}</span>
-            </div>
-            <p class="comment-text">${escHtml(c.text)}</p>
-          </div>`).join(''):'<p class="no-comments">// Aucun commentaire. Sois le premier !</p>'}
+
+      <div class="comment-thread" id="commentThread_${projectId}">
+        ${comments.length ? comments.map(cm => renderCommentItem(cm, projectId, containerId)).join('')
+          : '<p class="no-comments">Aucun commentaire. Sois le premier !</p>'}
       </div>
     </div>`;
 }
 
+function renderCommentItem(cm, projectId, containerId) {
+  const replies = cm.replies || [];
+  const repliesHtml = replies.map(r => `
+    <div class="reply-item" id="reply_${r.id}">
+      <div class="comment-avatar reply-avatar">${escHtml(r.author[0]||'?').toUpperCase()}</div>
+      <div class="comment-bubble">
+        <div class="comment-meta">
+          <span class="comment-author">${escHtml(r.author)}</span>
+          <span class="comment-date">${timeAgoComment(r.createdAt)}</span>
+        </div>
+        <p class="comment-text">${escHtml(r.text)}</p>
+      </div>
+    </div>`).join('');
+
+  return `
+    <div class="comment-item-wrap" id="comment_${cm.id}">
+      <div class="comment-item-row">
+        <div class="comment-avatar">${escHtml(cm.author[0]||'?').toUpperCase()}</div>
+        <div class="comment-bubble">
+          <div class="comment-meta">
+            <span class="comment-author">${escHtml(cm.author)}</span>
+            <span class="comment-date">${timeAgoComment(cm.createdAt)}</span>
+          </div>
+          <p class="comment-text">${escHtml(cm.text)}</p>
+          <button class="reply-toggle-btn" onclick="toggleReplyForm('${cm.id}','${projectId}','${containerId}')">
+            ↩ Répondre${replies.length ? ` · ${replies.length} réponse${replies.length>1?'s':''}` : ''}
+          </button>
+        </div>
+      </div>
+
+      ${repliesHtml ? `<div class="replies-list">${repliesHtml}</div>` : ''}
+
+      <div class="reply-form-wrap" id="replyForm_${cm.id}" style="display:none">
+        <form class="reply-form" onsubmit="submitReply(event,'${projectId}','${cm.id}','${containerId}')">
+          <div class="comment-form-row">
+            <input type="text"  id="replyName_${cm.id}"  placeholder="Ton pseudo" required maxlength="50"/>
+            <input type="email" id="replyEmail_${cm.id}" placeholder="Email (optionnel)" maxlength="100"/>
+          </div>
+          <textarea id="replyText_${cm.id}" placeholder="Ta réponse..." required maxlength="500"></textarea>
+          <div style="display:flex;gap:.5rem">
+            <button type="submit" class="comment-submit">↩ Répondre</button>
+            <button type="button" class="comment-cancel" onclick="toggleReplyForm('${cm.id}','${projectId}','${containerId}')">Annuler</button>
+          </div>
+        </form>
+      </div>
+    </div>`;
+}
+
+function toggleReplyForm(commentId, projectId, containerId) {
+  const form = document.getElementById(`replyForm_${commentId}`);
+  if (!form) return;
+  const isOpen = form.style.display !== 'none';
+  form.style.display = isOpen ? 'none' : 'block';
+  if (!isOpen) document.getElementById(`replyName_${commentId}`)?.focus();
+}
+
 async function submitComment(e, projectId, containerId) {
   e.preventDefault();
-  const author=document.getElementById('commentName').value.trim();
-  const text=document.getElementById('commentText').value.trim();
-  if(!author||!text)return;
-  const btn=e.target.querySelector('button[type="submit"]');
-  btn.textContent='⟳ Envoi...';btn.disabled=true;
-  await Store.addComment(projectId,{author,text});
-  await renderComments(projectId,containerId);
-  showToast('✓ Commentaire ajouté !');
+  const author = document.getElementById(`commentName_${projectId}`)?.value.trim();
+  const text   = document.getElementById(`commentText_${projectId}`)?.value.trim();
+  if (!author || !text) return;
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.textContent = '⟳ Envoi...'; btn.disabled = true;
+  await Store.addComment(projectId, { author, text });
+  await renderComments(projectId, containerId);
+  showToast('✓ Commentaire publié !');
+}
+
+async function submitReply(e, projectId, commentId, containerId) {
+  e.preventDefault();
+  const author = document.getElementById(`replyName_${commentId}`)?.value.trim();
+  const text   = document.getElementById(`replyText_${commentId}`)?.value.trim();
+  if (!author || !text) return;
+  const btn = e.target.querySelector('button[type="submit"]');
+  btn.textContent = '⟳ Envoi...'; btn.disabled = true;
+  await Store.addReply(projectId, commentId, { author, text });
+  await renderComments(projectId, containerId);
+  showToast('✓ Réponse publiée !');
+}
+
+function timeAgoComment(iso) {
+  if (!iso) return '';
+  const diff = (Date.now() - new Date(iso)) / 1000;
+  if (diff < 60)    return 'à l\'instant';
+  if (diff < 3600)  return Math.floor(diff/60) + ' min';
+  if (diff < 86400) return Math.floor(diff/3600) + ' h';
+  if (diff < 604800)return Math.floor(diff/86400) + ' j';
+  return fmtDate(iso);
 }
 
 /* ── SKILL BARS ── */

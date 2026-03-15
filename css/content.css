@@ -153,3 +153,106 @@ ol.content-list li::marker { color: var(--cyan); font-family: var(--mono); font-
   .content-hero { flex-direction: column-reverse; }
   .ch-emoji { font-size: 3rem; }
 }
+
+/* ════════════════════════════════════════════════════════
+   PDF VIEWER — Style LinkedIn
+   ════════════════════════════════════════════════════════ */
+.pdf-viewer {
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+  box-shadow: 0 4px 24px rgba(0,0,0,.3);
+}
+.pdf-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: .85rem 1.1rem;
+  background: var(--bg4);
+  border-bottom: 1px solid var(--border);
+  gap: .75rem; flex-wrap: wrap;
+}
+.pdf-title-row {
+  display: flex; align-items: center; gap: .6rem; min-width: 0;
+}
+.pdf-icon { font-size: 1.1rem; flex-shrink: 0; }
+.pdf-title {
+  font-size: .85rem; font-weight: 600; color: var(--txt);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.pdf-controls {
+  display: flex; align-items: center; gap: .4rem; flex-shrink: 0;
+}
+.pdf-page-info {
+  font-family: var(--mono); font-size: .72rem; color: var(--txt2);
+  padding: .3rem .6rem; background: var(--bg5);
+  border-radius: 4px; font-weight: 500;
+}
+.pdf-btn {
+  width: 32px; height: 32px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg3);
+  color: var(--txt2); font-size: .95rem; font-weight: 700;
+  cursor: pointer; transition: all .2s;
+  display: flex; align-items: center; justify-content: center;
+  text-decoration: none;
+}
+.pdf-btn:hover:not(:disabled) {
+  border-color: var(--border2); color: var(--accent);
+  background: rgba(79,156,249,.06);
+}
+.pdf-btn:disabled { opacity: .3; cursor: not-allowed; }
+.pdf-dl { font-size: .85rem; }
+
+.pdf-canvas-wrap {
+  position: relative;
+  background: #1a1a2e;
+  min-height: 200px;
+  display: flex; align-items: center; justify-content: center;
+}
+.pdf-canvas {
+  display: block; max-width: 100%; height: auto;
+  transition: opacity .25s;
+}
+.pdf-canvas.pdf-slide-in {
+  animation: pdfSlide .3s cubic-bezier(.4,0,.2,1);
+}
+@keyframes pdfSlide {
+  from { opacity: 0; transform: translateX(18px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.pdf-loading {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; gap: .65rem;
+  color: var(--txt3); font-size: .82rem; font-weight: 500;
+  background: var(--bg3);
+}
+.pdf-spinner {
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid var(--border2); border-top-color: var(--accent);
+  animation: spin .7s linear infinite; flex-shrink: 0;
+}
+
+/* Zones de swipe invisibles (gauche/droite) */
+.pdf-swipe-left, .pdf-swipe-right {
+  position: absolute; top: 0; bottom: 0; width: 60px;
+  cursor: pointer; z-index: 2;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s;
+}
+.pdf-swipe-left  { left: 0; background: linear-gradient(90deg, rgba(8,12,16,.5), transparent); }
+.pdf-swipe-right { right: 0; background: linear-gradient(270deg, rgba(8,12,16,.5), transparent); }
+.pdf-swipe-left::after  { content: '‹'; color: #fff; font-size: 2rem; font-weight: 300; }
+.pdf-swipe-right::after { content: '›'; color: #fff; font-size: 2rem; font-weight: 300; }
+.pdf-canvas-wrap:hover .pdf-swipe-left:not([disabled]),
+.pdf-canvas-wrap:hover .pdf-swipe-right:not([disabled]) { opacity: 1; }
+
+.pdf-caption {
+  padding: .6rem 1.1rem;
+  font-size: .78rem; color: var(--txt3);
+  border-top: 1px solid var(--border);
+  font-style: italic;
+}
+.pdf-empty {
+  font-family: var(--mono); font-size: .8rem; color: var(--txt3);
+  padding: 1.5rem; text-align: center;
+}

@@ -37,6 +37,129 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
+
+/* ════════════════════════════════════════════════════════════
+   SYSTÈME DE NOTIFICATIONS (likes + commentaires)
+   ════════════════════════════════════════════════════════════ */
+const NOTIF_KEY = 'saidoss_notifs';
+let _notifUnsub = null;
+
+function loadNotifs() {
+  try { return JSON.parse(localStorage.getItem(NOTIF_KEY)) || []; }
+  catch { return []; }
+}
+function saveNotifs(notifs) { localStorage.setItem(NOTIF_KEY, JSON.stringify(notifs)); }
+
+function getUnreadCount() { return loadNotifs().filter(n => !n.read).length; }
+
+function addNotif(type, text, projectTitle) {
+  const notifs = loadNotifs();
+  notifs.unshift({ id: Date.now().toString(), type, text, projectTitle, read: false, time: new Date().toISOString() });
+  saveNotifs(notifs.slice(0, 50)); // garde 50 max
+  updateBellBadge();
+}
+
+function updateBellBadge() {
+  const count = getUnreadCount();
+  const badge = document.getElementById('notifBadge');
+  if (!badge) return;
+  badge.textContent = count > 9 ? '9+' : count;
+  badge.style.display = count > 0 ? 'flex' : 'none';
+}
+
+function markAllRead() {
+  const notifs = loadNotifs().map(n => ({ ...n, read: true }));
+  saveNotifs(notifs);
+  updateBellBadge();
+  renderNotifPanel();
+}
+
+function toggleNotifPanel() {
+  const panel = document.getElementById('notifPanel');
+  if (!panel) return;
+  panel.classList.toggle('open');
+  if (panel.classList.contains('open')) renderNotifPanel();
+}
+
+function renderNotifPanel() {
+  const list = document.getElementById('notifList');
+  if (!list) return;
+  const notifs = loadNotifs();
+  if (!notifs.length) {
+    list.innerHTML = '<div class="notif-empty">// Aucune notification</div>';
+    return;
+  }
+  list.innerHTML = notifs.map(n => `
+    <div class="notif-item ${n.read?'':'unread'}">
+      <span class="notif-icon">${n.type==='like'?'♥':'💬'}</span>
+      <div class="notif-body">
+        <strong>${escHtml(n.text)}</strong>
+        <span>${escHtml(n.projectTitle||'')}</span>
+      </div>
+      <span class="notif-time">${timeAgo(n.time)}</span>
+    </div>`).join('');
+}
+
+function timeAgo(iso) {
+  if (!iso) return '';
+  const diff = (Date.now() - new Date(iso)) / 1000;
+  if (diff < 60) return 'maintenant';
+  if (diff < 3600) return Math.floor(diff/60) + 'min';
+  if (diff < 86400) return Math.floor(diff/3600) + 'h';
+  return Math.floor(diff/86400) + 'j';
+}
+
+function startNotifWatcher() {
+  if (!window.Store || !Store.getProjects) return;
+
+  // Surveille les commentaires et likes en temps réel via Firestore
+  Store.getProjects().then(projects => {
+    projects.forEach(p => {
+      // Watch comments
+      if (window.firebase_db) return; // evite doublons
+    });
+  });
+
+  // Polling simple toutes les 30s pour détecter nouveaux likes/commentaires
+  let _lastLikes = {}, _lastComments = {};
+
+  async function checkUpdates() {
+    try {
+      const projects = await Store.getProjects();
+      for (const p of projects) {
+        const [likes, comments] = await Promise.all([
+          Store.getLikes(p.id),
+          Store.getComments(p.id),
+        ]);
+        // Nouveau like?
+        if (_lastLikes[p.id] !== undefined && likes > _lastLikes[p.id]) {
+          addNotif('like', `Nouveau like sur "${p.title.slice(0,30)}..."`, p.title);
+        }
+        _lastLikes[p.id] = likes;
+        // Nouveau commentaire?
+        if (_lastComments[p.id] !== undefined && comments.length > _lastComments[p.id]) {
+          const last = comments[comments.length-1];
+          addNotif('comment', `${last?.author||'Quelqu\'un'} a commenté`, p.title);
+        }
+        _lastComments[p.id] = comments.length;
+      }
+    } catch(e) {}
+  }
+
+  // Init values first, then poll
+  checkUpdates().then(() => {
+    setInterval(checkUpdates, 30000);
+  });
+}
+
+// Close notif panel on outside click
+document.addEventListener('click', e => {
+  const wrap = document.getElementById('notifWrap');
+  if (wrap && !wrap.contains(e.target)) {
+    document.getElementById('notifPanel')?.classList.remove('open');
+  }
+});
+
 /* ── Admin Cursor ── */
 function initAdminCursor() {
   const dot  = document.getElementById('cursor');
@@ -93,6 +216,26 @@ function initLogin() {
 function showAdmin() {
   closeModal('loginModal');
   document.getElementById('adminShell').style.display = 'flex';
+  // Inject floating notification bell (bottom-right fixed)
+  if (!document.getElementById('notifWrap')) {
+    const bellWrap = document.createElement('div');
+    bellWrap.id = 'notifWrap';
+    bellWrap.innerHTML = `
+      <button class="notif-bell-btn" onclick="toggleNotifPanel()" title="Notifications" id="notifBellBtn">
+        <span style="font-size:1.1rem">🔔</span>
+        <span class="notif-badge" id="notifBadge" style="display:none">0</span>
+      </button>
+      <div class="notif-panel" id="notifPanel">
+        <div class="notif-header">
+          <h4>🔔 Notifications</h4>
+          <button class="notif-mark-read" onclick="markAllRead()">Tout lire</button>
+        </div>
+        <div class="notif-list" id="notifList"></div>
+      </div>`;
+    document.body.appendChild(bellWrap);
+    updateBellBadge();
+    startNotifWatcher();
+  }
   renderView('dashboard');
 }
 
@@ -122,6 +265,7 @@ function renderView(view) {
     case 'projects':  viewProjects().then(html  => { main.innerHTML = html;  }); return;
     case 'posts':     viewPosts().then(html    => { main.innerHTML = html;  }); return;
     case 'settings':  main.innerHTML = viewSettings();  initSettingsEvents(); break;
+    case 'profil':    viewProfil().then(html    => { main.innerHTML = html; initProfilEvents(); }); return;
     case 'arsenal':   viewArsenal().then(html   => { main.innerHTML = html; initArsenalEvents(); }); return;
     case 'comments':  viewComments().then(html  => { main.innerHTML = html; }); return;
   }
@@ -275,66 +419,247 @@ async function viewPosts() {
 
 /* ── Settings View ── */
 function viewSettings() {
+  const user = Store.getCurrentUser();
   return `
   <div class="view-header">
-    <div><p class="view-title">Paramètres</p></div>
+    <div><p class="view-title">Paramètres</p><p class="view-subtitle">// Compte Firebase & Sauvegardes</p></div>
   </div>
-  <div class="settings-card">
-    <h3>// Changer le mot de passe</h3>
+
+  <!-- Compte Firebase -->
+  <div class="settings-card" style="margin-bottom:1.5rem">
+    <h3 style="margin-bottom:1rem">// Compte Firebase Auth</h3>
+    <div style="display:flex;align-items:center;gap:.75rem;padding:.85rem 1rem;background:var(--bg4);border-radius:var(--radius);margin-bottom:1.25rem;border:1px solid var(--border)">
+      <div style="width:38px;height:38px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--purple));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;font-size:.95rem;flex-shrink:0">
+        ${esc((user?.email?.[0]||'A').toUpperCase())}
+      </div>
+      <div>
+        <p style="font-weight:600;font-size:.88rem;color:var(--txt)">${esc(user?.email||'admin')}</p>
+        <p style="font-size:.72rem;color:var(--green);font-family:var(--mono)">✓ Connecté via Firebase Auth</p>
+      </div>
+    </div>
+
+    <p style="font-size:.8rem;color:var(--txt2);margin-bottom:1.1rem;line-height:1.6">
+      Le mot de passe est géré directement par <strong>Firebase Authentication</strong>.
+      Pour le changer, saisis ton mot de passe actuel pour confirmer ton identité.
+    </p>
+
+    <div class="field" style="margin-bottom:.75rem">
+      <label class="label">Mot de passe actuel</label>
+      <input id="curPass"  class="input" type="password" placeholder="Mot de passe actuel" autocomplete="current-password"/>
+    </div>
     <div class="field" style="margin-bottom:.75rem">
       <label class="label">Nouveau mot de passe</label>
-      <input id="newPass" class="input" type="password" placeholder="Nouveau mot de passe"/>
+      <input id="newPass"  class="input" type="password" placeholder="Minimum 6 caractères" autocomplete="new-password"/>
     </div>
-    <div class="field" style="margin-bottom:1rem">
-      <label class="label">Confirmer</label>
-      <input id="confPass" class="input" type="password" placeholder="Confirmer le mot de passe"/>
+    <div class="field" style="margin-bottom:1.1rem">
+      <label class="label">Confirmer le nouveau</label>
+      <input id="confPass" class="input" type="password" placeholder="Répète le nouveau mot de passe" autocomplete="new-password"/>
     </div>
-    <button class="btn btn-cyan" id="savePassBtn">Enregistrer</button>
-    <div id="passMsg" style="font-family:var(--mono);font-size:.72rem;margin-top:.75rem"></div>
+    <button class="btn btn-cyan" id="savePassBtn">🔒 Changer le mot de passe</button>
+    <div id="passMsg" style="font-size:.78rem;margin-top:.85rem;padding:.5rem .75rem;border-radius:6px;display:none"></div>
   </div>
-  <div class="settings-card" style="margin-top:1.5rem;max-width:480px">
-    <h3>// Export / Import</h3>
-    <p style="font-family:var(--mono);font-size:.75rem;color:var(--txt3);margin-bottom:1rem">Exporte tout le contenu en JSON pour sauvegarde.</p>
+
+  <!-- Export / Import -->
+  <div class="settings-card" style="max-width:520px">
+    <h3 style="margin-bottom:.85rem">// Export / Import JSON</h3>
+    <p style="font-size:.8rem;color:var(--txt3);margin-bottom:1rem;line-height:1.6">
+      Exporte tes projets et articles en JSON pour sauvegarde locale.
+      Les données Firebase restent en ligne indépendamment.
+    </p>
     <div style="display:flex;gap:.75rem;flex-wrap:wrap">
       <button class="btn btn-ghost btn-sm" id="exportBtn">↓ Exporter JSON</button>
-      <label class="btn btn-ghost btn-sm" style="cursor:pointer">↑ Importer JSON<input type="file" id="importFile" accept=".json" style="display:none"/></label>
+      <label class="btn btn-ghost btn-sm" style="cursor:pointer">↑ Importer JSON
+        <input type="file" id="importFile" accept=".json" style="display:none"/>
+      </label>
     </div>
-    <div id="importMsg" style="font-family:var(--mono);font-size:.72rem;margin-top:.75rem"></div>
+    <div id="importMsg" style="font-size:.78rem;margin-top:.75rem"></div>
   </div>`;
 }
+
 function initSettingsEvents() {
+  // ── Changement de mot de passe Firebase ──
   document.getElementById('savePassBtn')?.addEventListener('click', async () => {
-    const n = document.getElementById('newPass').value;
-    const c = document.getElementById('confPass').value;
-    const msg = document.getElementById('passMsg');
-    if (!n) { msg.style.color='var(--red)'; msg.textContent='// Saisir un mot de passe.'; return; }
-    if (n !== c) { msg.style.color='var(--red)'; msg.textContent='// Les mots de passe ne correspondent pas.'; return; }
-    await Store.setPassword(n);
-    msg.style.color='var(--green)'; msg.textContent='// Mot de passe mis à jour.';
+    const cur  = document.getElementById('curPass').value;
+    const nw   = document.getElementById('newPass').value;
+    const conf = document.getElementById('confPass').value;
+    const msg  = document.getElementById('passMsg');
+
+    const showMsg = (text, ok) => {
+      msg.style.display = 'block';
+      msg.style.background  = ok ? 'rgba(34,197,94,.08)'   : 'rgba(239,68,68,.08)';
+      msg.style.border      = ok ? '1px solid rgba(34,197,94,.25)' : '1px solid rgba(239,68,68,.25)';
+      msg.style.color       = ok ? 'var(--green)' : 'var(--red)';
+      msg.textContent       = text;
+    };
+
+    if (!cur)       return showMsg('⚠ Saisis ton mot de passe actuel.', false);
+    if (!nw)        return showMsg('⚠ Saisis un nouveau mot de passe.', false);
+    if (nw.length < 6) return showMsg('⚠ Minimum 6 caractères.', false);
+    if (nw !== conf)return showMsg('⚠ Les mots de passe ne correspondent pas.', false);
+
+    const btn = document.getElementById('savePassBtn');
+    btn.textContent = '⟳ Changement...'; btn.disabled = true;
+
+    const result = await Store.changePassword(cur, nw);
+
+    btn.textContent = '🔒 Changer le mot de passe'; btn.disabled = false;
+
+    if (result.ok) {
+      showMsg('✓ Mot de passe changé avec succès !', true);
+      document.getElementById('curPass').value  = '';
+      document.getElementById('newPass').value  = '';
+      document.getElementById('confPass').value = '';
+    } else {
+      showMsg('✗ ' + result.error, false);
+    }
   });
+
+  // ── Export JSON ──
   document.getElementById('exportBtn')?.addEventListener('click', async () => {
+    const btn = document.getElementById('exportBtn');
+    btn.textContent = '⟳ Export...'; btn.disabled = true;
     const [projs, posts] = await Promise.all([Store.getProjects(), Store.getPosts()]);
     const data = { projects: projs, posts: posts, exported: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
-    const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='portfolio-backup.json'; a.click();
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `portfolio-backup-${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+    btn.textContent = '↓ Exporter JSON'; btn.disabled = false;
+    showToast('✓ Export téléchargé.');
   });
+
+  // ── Import JSON ──
   document.getElementById('importFile')?.addEventListener('change', e => {
     const file = e.target.files[0]; if (!file) return;
     const reader = new FileReader();
-    reader.onload = ev => {
+    reader.onload = async ev => {
       try {
         const d = JSON.parse(ev.target.result);
-        if (d.projects) localStorage.setItem('cmsv1_projects', JSON.stringify(d.projects));
-        if (d.posts)    localStorage.setItem('cmsv1_posts',    JSON.stringify(d.posts));
-        document.getElementById('importMsg').style.color = 'var(--green)';
-        document.getElementById('importMsg').textContent = '// Importé avec succès.';
-        renderView('dashboard');
-      } catch { document.getElementById('importMsg').style.color='var(--red)'; document.getElementById('importMsg').textContent='// Fichier JSON invalide.'; }
+        const msg = document.getElementById('importMsg');
+        let count = 0;
+        if (d.projects?.length) {
+          for (const p of d.projects) { await Store.upsertProject(p); count++; }
+        }
+        if (d.posts?.length) {
+          for (const p of d.posts) { await Store.upsertPost(p); count++; }
+        }
+        msg.style.color = 'var(--green)';
+        msg.textContent = '✓ ' + count + ' éléments importés dans Firebase.';
+        showToast('✓ Import Firebase réussi !');
+      } catch(err) {
+        document.getElementById('importMsg').style.color = 'var(--red)';
+        document.getElementById('importMsg').textContent = '✗ Fichier JSON invalide.';
+      }
     };
     reader.readAsText(file);
   });
 }
 
+
+
+/* ── Profil / À propos View ── */
+const NL = "\n", NL2 = "\n\n";
+async function viewProfil() {
+  const p = await Store.getProfile();
+  return `
+  <div class="view-header">
+    <div><p class="view-title">Profil & À propos</p><p class="view-subtitle">// Biographie, formation, titres du hero</p></div>
+    <button class="btn btn-cyan btn-sm" id="saveProfilBtn">✓ Enregistrer</button>
+  </div>
+
+  <div class="settings-card" style="margin-bottom:1.25rem">
+    <h3 style="margin-bottom:1rem">// Titres animés (hero)</h3>
+    <p style="font-family:var(--mono);font-size:.72rem;color:var(--txt3);margin-bottom:.85rem">Un titre par ligne — ils s'affichent en alternance sous ton nom</p>
+    <textarea id="pTitles" class="input textarea" style="min-height:110px;font-family:var(--mono);font-size:.82rem">${esc((p.titles||[]).join(NL))}</textarea>
+'))}</textarea>
+  </div>
+
+  <div class="settings-card" style="margin-bottom:1.25rem">
+    <h3 style="margin-bottom:1rem">// Biographie</h3>
+    <p style="font-family:var(--mono);font-size:.72rem;color:var(--txt3);margin-bottom:.85rem">Un paragraphe par ligne. Tu peux utiliser **gras**</p>
+    <textarea id="pBio" class="input textarea" style="min-height:150px;font-size:.85rem">${esc((p.bio||[]).join(NL2))}</textarea>
+'))}</textarea>
+  </div>
+
+  <div class="settings-card" style="margin-bottom:1.25rem">
+    <h3 style="margin-bottom:.85rem">// Formation</h3>
+    <div id="pFormationList">
+      ${(p.formation||[]).map((f,i) => profilEduRow('formation',i,f)).join('')}
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="addProfilRow('formation')" style="margin-top:.75rem">+ Ajouter</button>
+  </div>
+
+  <div class="settings-card">
+    <h3 style="margin-bottom:.85rem">// Expérience</h3>
+    <div id="pExperienceList">
+      ${(p.experience||[]).map((e,i) => profilEduRow('experience',i,e)).join('')}
+    </div>
+    <button class="btn btn-ghost btn-sm" onclick="addProfilRow('experience')" style="margin-top:.75rem">+ Ajouter</button>
+  </div>`;
+}
+
+function profilEduRow(type, idx, item) {
+  return `
+  <div class="profil-row" id="${type}_row_${idx}" style="display:grid;grid-template-columns:1fr 2fr 2fr 32px;gap:.5rem;margin-bottom:.6rem;align-items:start">
+    <input class="input" placeholder="Période" value="${esc(item.period||'')}" oninput="updateProfilRow('${type}',${idx},'period',this.value)" style="font-size:.78rem"/>
+    <input class="input" placeholder="Titre" value="${esc(item.title||'')}" oninput="updateProfilRow('${type}',${idx},'title',this.value)" style="font-size:.78rem"/>
+    <input class="input" placeholder="Sous-titre / description" value="${esc(item.sub||'')}" oninput="updateProfilRow('${type}',${idx},'sub',this.value)" style="font-size:.78rem"/>
+    <button class="btn btn-sm btn-red" onclick="removeProfilRow('${type}',${idx})" style="padding:.4rem">✕</button>
+  </div>`;
+}
+
+let _profilData = null;
+
+function initProfilEvents() {
+  Store.getProfile().then(p => { _profilData = JSON.parse(JSON.stringify(p)); });
+
+  document.getElementById('saveProfilBtn')?.addEventListener('click', async () => {
+    if (!_profilData) return;
+    const btn = document.getElementById('saveProfilBtn');
+    btn.textContent = '⟳ Sauvegarde...'; btn.disabled = true;
+    // Collect titles
+    _profilData.titles = document.getElementById('pTitles').value
+      .split(String.fromCharCode(10)).map(t=>t.trim()).filter(Boolean);
+    // Collect bio
+    _profilData.bio = document.getElementById('pBio').value
+      .split(String.fromCharCode(10)+String.fromCharCode(10)).map(p=>p.trim()).filter(Boolean);
+    try {
+      await Store.saveProfile(_profilData);
+      showToast('✓ Profil enregistré !');
+    } catch(e) { showToast('✗ Erreur sauvegarde.'); }
+    btn.textContent = '✓ Enregistrer'; btn.disabled = false;
+  });
+}
+
+function updateProfilRow(type, idx, key, val) {
+  if (!_profilData) return;
+  if (!_profilData[type]) _profilData[type] = [];
+  if (!_profilData[type][idx]) _profilData[type][idx] = {};
+  _profilData[type][idx][key] = val;
+}
+
+function addProfilRow(type) {
+  if (!_profilData) return;
+  if (!_profilData[type]) _profilData[type] = [];
+  const idx = _profilData[type].length;
+  _profilData[type].push({ period:'', title:'', sub:'' });
+  const list = document.getElementById('p' + type.charAt(0).toUpperCase() + type.slice(1) + 'List');
+  if (list) {
+    const div = document.createElement('div');
+    div.innerHTML = profilEduRow(type, idx, { period:'', title:'', sub:'' });
+    list.appendChild(div.firstElementChild);
+  }
+}
+
+function removeProfilRow(type, idx) {
+  if (!_profilData || !_profilData[type]) return;
+  _profilData[type].splice(idx, 1);
+  viewProfil().then(html => {
+    document.getElementById('adminMain').innerHTML = html;
+    initProfilEvents();
+  });
+}
 
 /* ── Arsenal View ── */
 async function viewArsenal() {
@@ -452,31 +777,55 @@ async function viewComments() {
   const all = [...projects, ...posts];
   let html = `
   <div class="view-header">
-    <div><p class="view-title">Commentaires</p><p class="view-subtitle">// Modération des commentaires</p></div>
+    <div><p class="view-title">Commentaires</p><p class="view-subtitle">// Modération — commentaires & réponses</p></div>
   </div>`;
   let total = 0;
   for (const item of all) {
     const comments = await Store.getComments(item.id);
     if (!comments.length) continue;
-    total += comments.length;
+    const replyCount = comments.reduce((a,c)=>a+(c.replies||[]).length,0);
+    total += comments.length + replyCount;
     html += `
     <div class="settings-card" style="margin-bottom:1.25rem">
-      <h3 style="font-size:.85rem;margin-bottom:1rem;color:var(--cyan)">${esc(item.title)}</h3>
-      ${comments.map(c => `
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:.65rem 0;border-bottom:1px solid var(--border)">
-        <div>
-          <div style="display:flex;gap:.75rem;align-items:baseline;margin-bottom:.3rem">
-            <span style="font-family:var(--mono);font-size:.78rem;color:var(--cyan)">${esc(c.author)}</span>
-            <span style="font-family:var(--mono);font-size:.65rem;color:var(--txt3)">${fmtDate(c.createdAt)}</span>
+      <h3 style="font-size:.85rem;margin-bottom:1rem;color:var(--accent)">${esc(item.title)}
+        <span style="font-family:var(--mono);font-size:.68rem;color:var(--txt3);font-weight:400;margin-left:.5rem">${comments.length} commentaire${comments.length>1?'s':''} · ${replyCount} réponse${replyCount>1?'s':''}</span>
+      </h3>
+      ${comments.map(cm => `
+      <div style="padding:.65rem 0;border-bottom:1px solid var(--border)">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:.4rem">
+          <div>
+            <div style="display:flex;gap:.75rem;align-items:baseline;margin-bottom:.25rem">
+              <span style="font-size:.8rem;font-weight:700;color:var(--accent)">${esc(cm.author)}</span>
+              <span style="font-family:var(--mono);font-size:.65rem;color:var(--txt3)">${fmtDate(cm.createdAt)}</span>
+            </div>
+            <p style="font-size:.88rem;color:var(--txt2)">${esc(cm.text)}</p>
           </div>
-          <p style="font-size:.88rem;color:var(--txt2)">${esc(c.text)}</p>
+          <button class="btn btn-sm btn-red" onclick="deleteCommentAdmin('${item.id}','${cm.id}')" style="flex-shrink:0;margin-left:.75rem" title="Supprimer">✕</button>
         </div>
-        <button class="btn btn-sm btn-red" onclick="deleteCommentAdmin('${item.id}','${c.id}')" style="flex-shrink:0;margin-left:.75rem">✕</button>
+        ${(cm.replies||[]).map(r => `
+        <div style="margin-left:1.5rem;padding:.5rem 0 .5rem .75rem;border-left:2px solid var(--border2);display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="display:flex;gap:.5rem;align-items:baseline;margin-bottom:.2rem">
+              <span style="font-size:.75rem;font-weight:600;color:var(--purple)">↩ ${esc(r.author)}</span>
+              <span style="font-family:var(--mono);font-size:.62rem;color:var(--txt3)">${fmtDate(r.createdAt)}</span>
+            </div>
+            <p style="font-size:.83rem;color:var(--txt2)">${esc(r.text)}</p>
+          </div>
+          <button class="btn btn-sm btn-red" onclick="deleteReplyAdmin('${item.id}','${cm.id}','${r.id}')" style="flex-shrink:0;margin-left:.5rem;padding:.25rem .5rem" title="Supprimer réponse">✕</button>
+        </div>`).join('')}
       </div>`).join('')}
     </div>`;
   }
-  if (total === 0) html += '<div class="empty-state"><p>// Aucun commentaire.</p></div>';
+  if (total === 0) html += '<div class="empty-state"><p>// Aucun commentaire pour l\'instant.</p></div>';
   return html;
+}
+
+async function deleteReplyAdmin(projectId, commentId, replyId) {
+  try {
+    await Store.deleteReply(projectId, commentId, replyId);
+    renderView('comments');
+    showToast('✓ Réponse supprimée.');
+  } catch(e) { showToast('✗ Erreur.'); }
 }
 async function deleteCommentAdmin(projectId, commentId) {
   try { await Store.deleteComment(projectId, commentId); renderView('comments'); showToast('✓ Commentaire supprimé.'); } catch(e) { showToast('✗ Erreur.'); }
@@ -666,6 +1015,7 @@ const BLOCK_TYPES = [
   { type:'list',     icon:'≡', label:'Liste' },
   { type:'alert',    icon:'⚠', label:'Alerte' },
   { type:'divider',  icon:'—', label:'Séparateur' },
+  { type:'pdf',     icon:'📄', label:'PDF Viewer' },
 ];
 
 function openBlockPicker() {
@@ -682,6 +1032,13 @@ function addBlock(type) {
   closeModal('blockPickerModal');
   if (type === 'image') {
     openImagePicker(block => {
+      pendingBlocks.push(block);
+      renderBlockList();
+    });
+    return;
+  }
+  if (type === 'pdf') {
+    openPDFPicker(block => {
       pendingBlocks.push(block);
       renderBlockList();
     });
@@ -706,6 +1063,7 @@ function defaultBlock(type) {
     case 'divider':  return { type };
     case 'list':     return { type, ordered: false, items: [''] };
     case 'alert':    return { type, kind: 'info', text: '' };
+    case 'pdf':     return { type, src: '', title: '', pages: 1, caption: '' };
     default:         return { type };
   }
 }
@@ -751,6 +1109,7 @@ function blockPreview(b) {
     case 'divider':  return '──────────────';
     case 'list':     return `${b.ordered?'1.':'•'} ${esc((b.items||[''])[0]||'...')}`;
     case 'alert':    return `[${b.kind||'info'}] ${esc((b.text||'...').slice(0,60))}`;
+    case 'pdf':      return `📄 ${esc(b.title||b.src||'PDF non défini')}`;
     default: return b.type;
   }
 }
@@ -932,6 +1291,47 @@ function openImagePicker(cb) {
       showToast('// Sélectionne une image ou saisis une URL.');
     }
   };
+}
+
+/* ── PDF Picker ── */
+function openPDFPicker(cb) {
+  // Crée un input file invisible
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'application/pdf';
+  input.style.display = 'none';
+  document.body.appendChild(input);
+
+  input.addEventListener('change', () => {
+    const file = input.files[0];
+    if (!file) { document.body.removeChild(input); return; }
+
+    showToast('⟳ Lecture du PDF...');
+    const reader = new FileReader();
+    reader.onload = ev => {
+      const block = {
+        type: 'pdf',
+        src: ev.target.result,        // base64 data URL
+        title: file.name.replace('.pdf',''),
+        pages: 1,                      // sera mis à jour à l'affichage
+        caption: '',
+      };
+      document.body.removeChild(input);
+      // Détecter le nombre de pages avec PDF.js si dispo
+      if (window.pdfjsLib) {
+        pdfjsLib.getDocument(ev.target.result).promise.then(pdf => {
+          block.pages = pdf.numPages;
+          cb(block);
+          showToast(`✓ PDF chargé — ${pdf.numPages} page(s)`);
+        }).catch(() => { cb(block); showToast('✓ PDF chargé'); });
+      } else {
+        cb(block);
+        showToast('✓ PDF chargé');
+      }
+    };
+    reader.readAsDataURL(file);
+  });
+  input.click();
 }
 
 /* ════════════════════════════════════════════════════════════

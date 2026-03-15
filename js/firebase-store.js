@@ -30,7 +30,9 @@ import { getFirestore, collection, doc,
          onSnapshot, serverTimestamp,
          increment, arrayUnion }                  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import { getAuth, signInWithEmailAndPassword,
-         signOut, onAuthStateChanged }            from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+         signOut, onAuthStateChanged,
+         updatePassword, reauthenticateWithCredential,
+         EmailAuthProvider }            from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 const app  = initializeApp(FIREBASE_CONFIG);
 const db   = getFirestore(app);
@@ -45,6 +47,26 @@ const auth = getAuth(app);
 /* ══════════════════════════════════════════════════════════
    DONNÉES PAR DÉFAUT (chargées une seule fois au 1er init)
    ══════════════════════════════════════════════════════════ */
+
+const DEFAULT_PROFILE = {
+  titles: ['Binary Exploitation','Reverse Engineering','SOC Analyst','CTF Player / 0xSaidoss','Futur Analyste Cyber'],
+  bio: [
+    "J'ai découvert la cybersécurité en classe de **première**, sans ordinateur, en apprenant depuis des vidéos et de la documentation. Après mon bac (Série D, Assez Bien), je me suis inscrit en **BTS Réseaux & Télécommunications à HEGES (Marcory)**.",
+    "Le **7 décembre 2024**, j'ai eu mon premier PC et installé immédiatement Kali Linux. J'ai rejoint TryHackMe sous **0xSaidoss** et c'est là que j'ai découvert ma vraie passion : la **Binary Exploitation** et le **Reverse Engineering**.",
+    "En décembre 2025, j'ai rejoint **We.Code** — programme GIZ / EPITECH / M-Studio — en parallèle de mon BTS."
+  ],
+  formation: [
+    { period:'Janv. 2026 – Juil. 2026', title:'Analyste Cybersécurité — We.Code', sub:'Programme GIZ / EPITECH / M-Studio · Sécurité numérique pratique' },
+    { period:'Oct. 2024 – Juil. 2026',  title:'BTS Réseaux Informatiques & Télécommunications', sub:'HEGES — Marcory, Abidjan' },
+    { period:'Mars 2025',               title:'Attestation — Fibre Optique', sub:'Formation pratique · HEGES-Marcory' },
+    { period:'Oct. 2023 – Juin 2024',   title:'Baccalauréat Série D — Assez Bien', sub:'Lycée Moderne de Kokumbo · Toumodi' },
+  ],
+  experience: [
+    { period:'Juil. 2025 – Aujourd\'hui', title:'CTF — Root-Me PRO', sub:'Binary Exploitation, x86/x64, Heap, Format String · À distance' },
+    { period:'Déc. 2024 – Aujourd\'hui',  title:'CTF — TryHackMe', sub:'Sécurité réseau, Kali Linux, 100+ machines · À distance' },
+  ],
+};
+
 const SAMPLE_PROJECTS = [
   { id:'proj_001', title:'SOC Lab — Suricata IDS + Wazuh SIEM', category:'lab', status:'complete',
     summary:"Mise en place d'un IDS (Suricata) et d'un SIEM (Wazuh) pour la détection et la réponse aux incidents.",
@@ -150,6 +172,26 @@ async function loginAdmin(password, email) {
   }
 }
 async function logoutAdmin() { await signOut(auth); }
+
+async function changePassword(currentPassword, newPassword) {
+  try {
+    const user = auth.currentUser;
+    if (!user) return { ok: false, error: 'Non connecté.' };
+    // Ré-authentification requise par Firebase avant changement de mot de passe
+    const credential = EmailAuthProvider.credential(user.email, currentPassword);
+    await reauthenticateWithCredential(user, credential);
+    await updatePassword(user, newPassword);
+    return { ok: true };
+  } catch(e) {
+    const msgs = {
+      'auth/wrong-password':       'Mot de passe actuel incorrect.',
+      'auth/weak-password':        'Nouveau mot de passe trop faible (6 caractères min).',
+      'auth/requires-recent-login':'Session expirée. Reconnecte-toi.',
+      'auth/too-many-requests':    'Trop de tentatives. Réessaie plus tard.',
+    };
+    return { ok: false, error: msgs[e.code] || e.message };
+  }
+}
 function isLoggedIn() { return !!_currentUser; }
 function getCurrentUser() { return _currentUser; }
 
@@ -289,23 +331,48 @@ async function toggleLike(projectId) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   COMMENTAIRES
+   COMMENTAIRES + RÉPONSES
+   Schema: comments/{projectId}/items/{commentId}
+     { author, text, createdAt, replies: [{id,author,text,createdAt}] }
    ══════════════════════════════════════════════════════════ */
 async function getComments(projectId) {
   try {
     const snap = await getDocs(
       query(collection(db,'comments',projectId,'items'), orderBy('createdAt','asc'))
     );
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    return snap.docs.map(d => ({ id: d.id, ...d.data(), replies: d.data().replies || [] }));
   } catch(e) { return []; }
 }
 
 async function addComment(projectId, data) {
   await addDoc(collection(db,'comments',projectId,'items'), {
-    author: data.author,
-    text:   data.text,
+    author:    data.author,
+    text:      data.text,
+    createdAt: new Date().toISOString(),
+    replies:   [],
+  });
+}
+
+async function addReply(projectId, commentId, data) {
+  const ref   = doc(db,'comments',projectId,'items',commentId);
+  const snap  = await getDoc(ref);
+  if (!snap.exists()) return;
+  const replies = snap.data().replies || [];
+  replies.push({
+    id:        uid(),
+    author:    data.author,
+    text:      data.text,
     createdAt: new Date().toISOString(),
   });
+  await updateDoc(ref, { replies });
+}
+
+async function deleteReply(projectId, commentId, replyId) {
+  const ref   = doc(db,'comments',projectId,'items',commentId);
+  const snap  = await getDoc(ref);
+  if (!snap.exists()) return;
+  const replies = (snap.data().replies || []).filter(r => r.id !== replyId);
+  await updateDoc(ref, { replies });
 }
 
 async function deleteComment(projectId, commentId) {
@@ -352,6 +419,30 @@ async function seedCollection(colName, items) {
   }
 }
 
+
+
+/* ══════════════════════════════════════════════════════════
+   PROFIL / À PROPOS
+   Schema: meta/profile { bio, titles[], formation[], experience[], terminal{} }
+   ══════════════════════════════════════════════════════════ */
+async function getProfile() {
+  try {
+    const snap = await getDoc(doc(db,'meta','profile'));
+    return snap.exists() ? snap.data() : DEFAULT_PROFILE;
+  } catch(e) { return DEFAULT_PROFILE; }
+}
+
+async function saveProfile(data) {
+  await setDoc(doc(db,'meta','profile'), data, { merge: true });
+}
+
+function onProfileChange(callback) {
+  return onSnapshot(
+    doc(db,'meta','profile'),
+    snap => callback(snap.exists() ? snap.data() : DEFAULT_PROFILE),
+    err  => console.warn('onProfileChange:', err)
+  );
+}
 
 /* ══════════════════════════════════════════════════════════
    TEMPS RÉEL — onSnapshot listeners
@@ -402,6 +493,8 @@ function renderBlock(block) {
         <img src="${block.src}" alt="${escHtml(block.caption||'')}" loading="lazy"/>
         ${block.caption?`<figcaption>${escHtml(block.caption)}</figcaption>`:''}
       </figure>`;
+    case 'pdf':
+      return renderPDFViewer(block);
     case 'quote':
       return `<blockquote class="content-quote">
         <p>${parseInline(block.text)}</p>
@@ -420,6 +513,41 @@ function renderBlock(block) {
     default: return '';
   }
 }
+function renderPDFViewer(block) {
+  if (!block.src) return '<div class="pdf-empty">// Aucun PDF chargé</div>';
+  const pages = block.pages || 1;
+  const title = escHtml(block.title || 'Document PDF');
+  const uid   = 'pdf_' + Math.random().toString(36).slice(2,8);
+  return `
+  <div class="pdf-viewer" id="${uid}" data-src="${block.src}" data-pages="${pages}">
+    <div class="pdf-header">
+      <div class="pdf-title-row">
+        <span class="pdf-icon">📄</span>
+        <span class="pdf-title">${title}</span>
+      </div>
+      <div class="pdf-controls">
+        <span class="pdf-page-info"><span class="pdf-cur">1</span> / ${pages}</span>
+        <button class="pdf-btn pdf-prev" onclick="pdfPrev('${uid}')" disabled>‹</button>
+        <button class="pdf-btn pdf-next" onclick="pdfNext('${uid}')" ${pages<=1?'disabled':''}>›</button>
+        <a class="pdf-btn pdf-dl" href="${block.src}" download target="_blank" title="Télécharger">↓</a>
+      </div>
+    </div>
+    <div class="pdf-canvas-wrap">
+      <div class="pdf-loading" id="${uid}_loading">
+        <div class="pdf-spinner"></div><span>Chargement du PDF...</span>
+      </div>
+      <canvas class="pdf-canvas" id="${uid}_canvas"></canvas>
+      <!-- Swipe zone -->
+      <div class="pdf-swipe-left"  onclick="pdfPrev('${uid}')"></div>
+      <div class="pdf-swipe-right" onclick="pdfNext('${uid}')"></div>
+    </div>
+    ${block.caption?`<p class="pdf-caption">${escHtml(block.caption)}</p>`:''}
+  </div>
+  <script>
+    (function(){ if(typeof PDF_INIT==='undefined'){window.PDF_INIT={}; initAllPDFs();} })();
+  </script>`;
+}
+
 function renderBlocks(blocks=[]) { return (blocks||[]).map(renderBlock).join('\n'); }
 
 /* ══════════════════════════════════════════════════════════
@@ -428,7 +556,7 @@ function renderBlocks(blocks=[]) { return (blocks||[]).map(renderBlock).join('\n
 window.Store = {
   uid,
   /* auth */
-  login: loginAdmin, logout: logoutAdmin, isLoggedIn, onAuthReady, getCurrentUser,
+  login: loginAdmin, logout: logoutAdmin, isLoggedIn, onAuthReady, getCurrentUser, changePassword,
   /* projects */
   getProjects, getProject, upsertProject, deleteProject,
   /* posts */
@@ -438,7 +566,9 @@ window.Store = {
   /* likes */
   getLikes, hasLiked, toggleLike,
   /* comments */
-  getComments, addComment, deleteComment,
+  getComments, addComment, addReply, deleteReply, deleteComment,
+  /* about/profile */
+  getProfile, saveProfile, onProfileChange,
   /* visits */
   recordVisit, getVisits,
   /* realtime */

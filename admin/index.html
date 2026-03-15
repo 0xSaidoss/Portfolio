@@ -4,7 +4,7 @@
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin — Portfolio CMS</title>
-  <link rel="stylesheet" href="/Portfolio/css/theme.css"/>
+  <link rel="stylesheet" href="/Portfolio/css/theme.css?v=1773560641"/>
   <link rel="stylesheet" href="/Portfolio/admin/css/admin.css"/>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect fill='%23050a0e' width='32' height='32'/><text y='24' font-size='22' fill='%2300d4ff'>⬡</text></svg>"/>
   <style>
@@ -14,6 +14,7 @@
     input, textarea { cursor: text !important; }
     .block-drag { cursor: grab !important; }
   </style>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@700;800&display=swap"/>
 </head>
 <body class="admin-page">
 
@@ -38,11 +39,12 @@
 <!-- ADMIN SHELL (hidden until login) -->
 <div id="adminShell" style="display:none">
   <aside class="admin-sidebar" id="sidebar">
-    <div class="sidebar-logo"><span class="br">[</span>AC<span class="br">]</span><span class="sidebar-tag">Admin</span></div>
+    <div class="sidebar-logo"><span class="br">[</span>0xSaidoss<span class="br">]</span><span class="sidebar-tag">Admin</span></div>
     <nav class="sidebar-nav">
       <button class="snav-btn active" data-view="dashboard">📊 Dashboard</button>
       <button class="snav-btn" data-view="projects">🗂️ Projets</button>
       <button class="snav-btn" data-view="posts">📝 Articles & Writeups</button>
+      <button class="snav-btn" data-view="profil">👤 Profil / À propos</button>
       <button class="snav-btn" data-view="arsenal">⚔️ Arsenal</button>
       <button class="snav-btn" data-view="comments">💬 Commentaires</button>
       <button class="snav-btn" data-view="settings" style="margin-top:auto">⚙️ Paramètres</button>
@@ -98,7 +100,9 @@
 
 <div class="toast" id="toast"></div>
 
-<script type="module" src="/Portfolio/js/firebase-store.js?v=1773555872"></script>
-<script defer src="/Portfolio/admin/js/admin.js?v=1773555872"></script>
+<script type="module" src="/Portfolio/js/firebase-store.js?v=1773560641"></script>
+<script defer src="/Portfolio/admin/js/admin.js?v=1773560641"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>if(window.pdfjsLib)pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";</script>
 </body>
 </html>
