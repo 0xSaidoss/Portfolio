@@ -21,20 +21,24 @@
 <div class="modal-overlay open" id="loginModal">
   <div class="modal">
     <h2>// Accès Admin</h2>
-    <p style="font-family:var(--mono);font-size:.75rem;color:var(--txt3);margin-bottom:1.5rem">Mot de passe par défaut : <span style="color:var(--amber)">cyber2024</span></p>
+    <p style="font-family:var(--mono);font-size:.75rem;color:var(--txt3);margin-bottom:1.5rem">// Connexion Firebase Auth</p>
+    <div class="field" style="margin-bottom:.75rem">
+      <label class="label">Email</label>
+      <input id="loginEmail" class="input" type="email" placeholder="msaidou02.diallo@gmail.com" autocomplete="email" value="msaidou02.diallo@gmail.com"/>
+    </div>
     <div class="field" style="margin-bottom:1rem">
       <label class="label">Mot de passe</label>
       <input id="loginInput" class="input" type="password" placeholder="••••••••" autocomplete="current-password"/>
     </div>
-    <div id="loginError" style="font-family:var(--mono);font-size:.72rem;color:var(--red);margin-bottom:1rem;display:none">// Mot de passe incorrect.</div>
-    <button class="btn btn-cyan" style="width:100%;justify-content:center" id="loginBtn">Connexion →</button>
+    <div id="loginError" style="font-family:var(--mono);font-size:.72rem;color:var(--red);margin-bottom:1rem;display:none">// Email ou mot de passe incorrect.</div>
+    <button class="btn btn-cyan" style="width:100%;justify-content:center" id="loginBtn">CONNEXION →</button>
   </div>
 </div>
 
 <!-- ADMIN SHELL (hidden until login) -->
 <div id="adminShell" style="display:none">
   <aside class="admin-sidebar" id="sidebar">
-    <div class="sidebar-logo"><span class="br">[</span>0xSaidoss<span class="br">]</span><span class="sidebar-tag">Admin</span></div>
+    <div class="sidebar-logo"><span class="br">[</span>AC<span class="br">]</span><span class="sidebar-tag">Admin</span></div>
     <nav class="sidebar-nav">
       <button class="snav-btn active" data-view="dashboard">📊 Dashboard</button>
       <button class="snav-btn" data-view="projects">🗂️ Projets</button>
@@ -94,7 +98,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="/Portfolio/js/store.js"></script>
-<script src="/Portfolio/admin/js/admin.js"></script>
+<script type="module" src="/Portfolio/js/firebase-store.js?v=1773555872"></script>
+<script defer src="/Portfolio/admin/js/admin.js?v=1773555872"></script>
 </body>
 </html>

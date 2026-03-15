@@ -13,15 +13,28 @@ let blockPickerCb = null;  // callback when a block type is chosen
 let imgCb = null;          // callback when image is confirmed
 
 /* ── Boot ── */
+function waitForStore(cb) {
+  if (typeof window.Store !== 'undefined' && typeof window.Store.onAuthReady === 'function') {
+    cb();
+  } else {
+    setTimeout(() => waitForStore(cb), 50);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   initAdminCursor();
-  if (Store.isLoggedIn()) {
-    showAdmin();
-  } else {
-    openModal('loginModal');
-  }
-  initLogin();
-  initSidebar();
+  waitForStore(() => {
+    initLogin();
+    initSidebar();
+    // Attendre que Firebase Auth soit prêt
+    Store.onAuthReady(user => {
+      if (user) {
+        showAdmin();
+      } else {
+        openModal('loginModal');
+      }
+    });
+  });
 });
 
 /* ── Admin Cursor ── */
@@ -53,14 +66,18 @@ function initAdminCursor() {
 /* ── Login ── */
 function initLogin() {
   const btn   = document.getElementById('loginBtn');
+  const email = document.getElementById('loginEmail');
   const input = document.getElementById('loginInput');
   const err   = document.getElementById('loginError');
 
-  // Auto-login if session exists (already handled in DOMContentLoaded)
   const attempt = async () => {
-    const ok = await Store.checkPassword(input.value);
+    btn.textContent = '⟳ Connexion...'; btn.disabled = true;
+    // Store.login(password) uses ADMIN_EMAIL from firebase-store.js
+    // but we pass email too in case user changed it
+    const ok = await Store.login(input.value, email?.value);
+    btn.textContent = 'CONNEXION →'; btn.disabled = false;
     if (ok) {
-      Store.login();
+      closeModal('loginModal');
       showAdmin();
       err.style.display = 'none';
     } else {
@@ -74,7 +91,7 @@ function initLogin() {
 }
 
 function showAdmin() {
-  document.getElementById('loginModal').classList.remove('open');
+  closeModal('loginModal');
   document.getElementById('adminShell').style.display = 'flex';
   renderView('dashboard');
 }
@@ -88,8 +105,8 @@ function initSidebar() {
       renderView(btn.dataset.view);
     });
   });
-  document.getElementById('logoutBtn').addEventListener('click', () => {
-    Store.logout();
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    await Store.logout();
     location.reload();
   });
 }
@@ -101,21 +118,21 @@ function renderView(view) {
   currentView = view;
   const main = document.getElementById('adminMain');
   switch (view) {
-    case 'dashboard': main.innerHTML = viewDashboard(); break;
-    case 'projects':  main.innerHTML = viewProjects();  break;
-    case 'posts':     main.innerHTML = viewPosts();     break;
+    case 'dashboard': viewDashboard().then(html => main.innerHTML = html); return;
+    case 'projects':  viewProjects().then(html  => { main.innerHTML = html;  }); return;
+    case 'posts':     viewPosts().then(html    => { main.innerHTML = html;  }); return;
     case 'settings':  main.innerHTML = viewSettings();  initSettingsEvents(); break;
-    case 'arsenal':   main.innerHTML = viewArsenal();   initArsenalEvents();  break;
-    case 'comments':  main.innerHTML = viewComments();  break;
+    case 'arsenal':   viewArsenal().then(html   => { main.innerHTML = html; initArsenalEvents(); }); return;
+    case 'comments':  viewComments().then(html  => { main.innerHTML = html; }); return;
   }
 }
 
 /* ── Dashboard ── */
-function viewDashboard() {
-  const projs = Store.getProjects();
-  const posts = Store.getPosts();
+async function viewDashboard() {
+  const [projs, posts, visits] = await Promise.all([
+    Store.getProjects(), Store.getPosts(), Store.getVisits()
+  ]);
   const published = posts.filter(p=>p.published).length;
-  const visits = Store.getVisits();
   const today  = new Date().toISOString().slice(0,10);
   const todayV = (visits.daily||{})[today] || 0;
   const uniqueV = (visits.unique||[]).length;
@@ -187,8 +204,8 @@ function viewDashboard() {
 }
 
 /* ── Projects View ── */
-function viewProjects() {
-  const projs = Store.getProjects();
+async function viewProjects() {
+  const projs = await Store.getProjects();
   return `
   <div class="view-header">
     <div><p class="view-title">Projets</p><p class="view-subtitle">// ${projs.length} projet(s)</p></div>
@@ -218,8 +235,8 @@ function viewProjects() {
 }
 
 /* ── Posts View ── */
-function viewPosts() {
-  const posts = Store.getPosts();
+async function viewPosts() {
+  const posts = await Store.getPosts();
   return `
   <div class="view-header">
     <div><p class="view-title">Articles & Writeups</p><p class="view-subtitle">// ${posts.length} publication(s)</p></div>
@@ -295,8 +312,9 @@ function initSettingsEvents() {
     await Store.setPassword(n);
     msg.style.color='var(--green)'; msg.textContent='// Mot de passe mis à jour.';
   });
-  document.getElementById('exportBtn')?.addEventListener('click', () => {
-    const data = { projects: Store.getProjects(), posts: Store.getPosts(), exported: new Date().toISOString() };
+  document.getElementById('exportBtn')?.addEventListener('click', async () => {
+    const [projs, posts] = await Promise.all([Store.getProjects(), Store.getPosts()]);
+    const data = { projects: projs, posts: posts, exported: new Date().toISOString() };
     const blob = new Blob([JSON.stringify(data, null, 2)], {type:'application/json'});
     const a = document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='portfolio-backup.json'; a.click();
   });
@@ -319,8 +337,8 @@ function initSettingsEvents() {
 
 
 /* ── Arsenal View ── */
-function viewArsenal() {
-  const cats = Store.getArsenal();
+async function viewArsenal() {
+  const cats = await Store.getArsenal();
   return `
   <div class="view-header">
     <div><p class="view-title">Arsenal Technique</p><p class="view-subtitle">// Gérer les catégories de compétences</p></div>
@@ -350,8 +368,9 @@ function viewArsenal() {
 }
 
 let editingArsenal = null;
-function openArsenalEditor(id = null) {
-  const existing = id ? Store.getArsenal().find(c => c.id === id) : null;
+async function openArsenalEditor(id = null) {
+  const arsenalCats = await Store.getArsenal();
+  const existing = id ? arsenalCats.find(c => c.id === id) : null;
   editingArsenal = existing ? JSON.parse(JSON.stringify(existing)) : { id: Store.uid(), name:'', icon:'⬡', skills:[], tags:[] };
   document.getElementById('arsenalInner').innerHTML = renderArsenalEditor();
   openModal('arsenalModal');
@@ -414,37 +433,31 @@ function removeArsenalSkill(idx) {
   editingArsenal.skills.splice(idx, 1);
   document.getElementById('arsenalInner').innerHTML = renderArsenalEditor();
 }
-function saveArsenal() {
+async function saveArsenal() {
   editingArsenal.icon  = document.getElementById('arsCatIcon').value.trim() || '⬡';
   editingArsenal.name  = document.getElementById('arsCatName').value.trim();
   editingArsenal.tags  = document.getElementById('arsCatTags').value.split(',').map(t=>t.trim()).filter(Boolean);
   if (!editingArsenal.name) { showToast('// Nom requis.'); return; }
-  Store.upsertArsenalCat(editingArsenal);
-  closeModal('arsenalModal');
-  renderView('arsenal');
-  showToast('✓ Catégorie enregistrée !');
+  try { await Store.upsertArsenalCat(editingArsenal); closeModal('arsenalModal'); renderView('arsenal'); showToast('✓ Catégorie enregistrée !'); } catch(e) { showToast('✗ Erreur sauvegarde.'); }
 }
-function deleteArsenalCat(id) {
+async function deleteArsenalCat(id) {
   if (!confirm('Supprimer cette catégorie ?')) return;
-  Store.deleteArsenalCat(id);
-  renderView('arsenal');
-  showToast('✓ Catégorie supprimée.');
+  try { await Store.deleteArsenalCat(id); renderView('arsenal'); showToast('✓ Catégorie supprimée.'); } catch(e) { showToast('✗ Erreur.'); }
 }
 function initArsenalEvents() {}
 
 /* ── Comments View ── */
-function viewComments() {
-  const projects = Store.getProjects();
-  const posts    = Store.getPosts();
+async function viewComments() {
+  const [projects, posts] = await Promise.all([Store.getProjects(), Store.getPosts()]);
   const all = [...projects, ...posts];
   let html = `
   <div class="view-header">
     <div><p class="view-title">Commentaires</p><p class="view-subtitle">// Modération des commentaires</p></div>
   </div>`;
   let total = 0;
-  all.forEach(item => {
-    const comments = Store.getComments(item.id);
-    if (!comments.length) return;
+  for (const item of all) {
+    const comments = await Store.getComments(item.id);
+    if (!comments.length) continue;
     total += comments.length;
     html += `
     <div class="settings-card" style="margin-bottom:1.25rem">
@@ -461,14 +474,12 @@ function viewComments() {
         <button class="btn btn-sm btn-red" onclick="deleteCommentAdmin('${item.id}','${c.id}')" style="flex-shrink:0;margin-left:.75rem">✕</button>
       </div>`).join('')}
     </div>`;
-  });
+  }
   if (total === 0) html += '<div class="empty-state"><p>// Aucun commentaire.</p></div>';
   return html;
 }
-function deleteCommentAdmin(projectId, commentId) {
-  Store.deleteComment(projectId, commentId);
-  renderView('comments');
-  showToast('✓ Commentaire supprimé.');
+async function deleteCommentAdmin(projectId, commentId) {
+  try { await Store.deleteComment(projectId, commentId); renderView('comments'); showToast('✓ Commentaire supprimé.'); } catch(e) { showToast('✗ Erreur.'); }
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -476,17 +487,17 @@ function deleteCommentAdmin(projectId, commentId) {
    ════════════════════════════════════════════════════════════ */
 
 /* ── PROJECT EDITOR ── */
-function openProjectEditor(id = null) {
-  const existing = id ? Store.getProject(id) : null;
-  editingDoc = { kind: 'project', data: existing || { id: Store.uid(), title:'', category:'lab', status:'wip', summary:'', tags:[], githubUrl:'', coverEmoji:'⬡', content:[] } };
+async function openProjectEditor(id = null) {
+  const existing = id ? await Store.getProject(id) : null;
+  editingDoc = { kind: 'project', data: existing ? JSON.parse(JSON.stringify(existing)) : { id: Store.uid(), title:'', category:'lab', status:'wip', summary:'', tags:[], githubUrl:'', coverEmoji:'⬡', content:[] } };
   pendingBlocks = JSON.parse(JSON.stringify(editingDoc.data.content || []));
   renderEditorModal('project');
 }
 
 /* ── POST EDITOR ── */
-function openPostEditor(id = null, typeHint = 'article') {
-  const existing = id ? Store.getPost(id) : null;
-  editingDoc = { kind: 'post', data: existing || { id: Store.uid(), type: typeHint, title:'', category:'', excerpt:'', tags:[], coverEmoji: typeHint==='writeup'?'🚩':'📝', content:[], published: false } };
+async function openPostEditor(id = null, typeHint = 'article') {
+  const existing = id ? await Store.getPost(id) : null;
+  editingDoc = { kind: 'post', data: existing ? JSON.parse(JSON.stringify(existing)) : { id: Store.uid(), type: typeHint, title:'', category:'', excerpt:'', tags:[], coverEmoji: typeHint==='writeup'?'🚩':'📝', content:[], published: false } };
   pendingBlocks = JSON.parse(JSON.stringify(editingDoc.data.content || []));
   renderEditorModal('post');
 }
@@ -600,7 +611,7 @@ function toggleDraftInEditor() {
   }
 }
 
-function saveEditor() {
+async function saveEditor() {
   if (!editingDoc) return;
   const d = editingDoc.data;
   const kind = editingDoc.kind;
@@ -622,18 +633,24 @@ function saveEditor() {
   }
 
   if (!d.title) { showToast('// Titre requis.'); return; }
-
   d.content = JSON.parse(JSON.stringify(pendingBlocks));
 
-  if (kind === 'project') {
-    Store.upsertProject(d);
-  } else {
-    Store.upsertPost(d);
-  }
+  const btn = document.querySelector('.editor-topbar .btn-cyan');
+  if (btn) { btn.textContent = '⟳ Sauvegarde...'; btn.disabled = true; }
 
-  closeEditorModal();
-  renderView(kind === 'project' ? 'projects' : 'posts');
-  showToast(`// "${d.title}" enregistré.`);
+  try {
+    if (kind === 'project') {
+      await Store.upsertProject(d);
+    } else {
+      await Store.upsertPost(d);
+    }
+    closeEditorModal();
+    renderView(kind === 'project' ? 'projects' : 'posts');
+    showToast(`✓ "${d.title}" enregistré dans Firebase !`);
+  } catch(e) {
+    showToast('✗ Erreur sauvegarde. Réessaie.');
+    if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; }
+  }
 }
 
 /* ════════════════════════════════════════════════════════════
@@ -920,20 +937,23 @@ function openImagePicker(cb) {
 /* ════════════════════════════════════════════════════════════
    ACTIONS
    ════════════════════════════════════════════════════════════ */
-function deleteItem(kind, id) {
+async function deleteItem(kind, id) {
   if (!confirm('Supprimer définitivement ?')) return;
-  kind === 'project' ? Store.deleteProject(id) : Store.deletePost(id);
-  renderView(kind === 'project' ? 'projects' : 'posts');
-  showToast('// Supprimé.');
+  try {
+    if (kind === 'project') { await Store.deleteProject(id); }
+    else { await Store.deletePost(id); }
+    renderView(kind === 'project' ? 'projects' : 'posts');
+    showToast('✓ Supprimé.');
+  } catch(e) { showToast('✗ Erreur suppression.'); }
 }
 
 function previewItem(kind, id) {
-  const url = kind === 'project' ? `/Portfolio/pages/project.html?id=${id}` : `/Portfolio/pages/post.html?id=${id}`;
+  const url = kind === 'project' ? `/pages/project.html?id=${id}` : `/pages/post.html?id=${id}`;
   window.open(url, '_blank');
 }
 
-function togglePublish(id) {
-  const post = Store.getPost(id);
+async function togglePublish(id) {
+  const post = await Store.getPost(id);
   if (!post) return;
   post.published = !post.published;
   Store.upsertPost(post);

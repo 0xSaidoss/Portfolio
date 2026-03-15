@@ -36,4 +36,3 @@ const EMAILJS_PUBLIC_KEY  = 'YOUR_PUBLIC_KEY';
 localStorage.removeItem('cmsv1_passhash')
 // Recharge → mot de passe par défaut : cyber2024
 ```
-# Portfolio

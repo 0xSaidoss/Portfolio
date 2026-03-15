@@ -35,44 +35,50 @@
 <div class="cursor-follower" id="cursorFollower"></div>
 <div class="toast" id="toast"></div>
 
-<script src="/Portfolio/js/store.js"></script>
-<script src="/Portfolio/js/main.js"></script>
+<script type="module" src="/Portfolio/js/firebase-store.js?v=1773555872"></script>
+<script defer src="/Portfolio/js/main.js?v=1773555872"></script>
 <script>
-  const id = new URLSearchParams(location.search).get('id');
-  const p  = id ? Store.getProject(id) : null;
-  const el = document.getElementById('pageContent');
-
-  if (!p) {
-    el.innerHTML = `<div class="section"><p style="color:var(--red);font-family:var(--mono)">// Projet introuvable.</p><a href="/Portfolio/index.html" class="btn btn-ghost" style="margin-top:1rem">← Retour</a></div>`;
-  } else {
-    document.title = `${p.title} | 0xSaidoss`;
-    const statusClass = { complete:'badge-green', wip:'badge-amber', ctf:'badge-red' }[p.status] || 'badge-cyan';
-    const statusLabel = { complete:'Terminé', wip:'En cours', ctf:'CTF' }[p.status] || p.status;
-    el.innerHTML = `
-    <div class="content-page">
-      <div class="content-hero">
-        <div class="ch-inner">
-          <a href="Portfolio/index.html#projects" class="back-link">← Retour aux projets</a>
-          <div class="ch-meta">
-            <span class="badge ${statusClass}">${statusLabel}</span>
-            <span style="font-family:var(--mono);font-size:.7rem;color:var(--txt3)">${new Date(p.createdAt).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</span>
-          </div>
-          <h1 class="ch-title">${esc(p.title)}</h1>
-          <p class="ch-excerpt">${esc(p.summary||'')}</p>
-          <div class="ch-tags">${(p.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
-          ${p.githubUrl ? `<div style="margin-top:1.5rem"><a href="${p.githubUrl}" target="_blank" rel="noopener" class="btn btn-cyan">↗ Voir sur GitHub</a></div>` : ''}
-        </div>
-        <div class="ch-emoji">${p.coverEmoji||'⬡'}</div>
-      </div>
-      <div class="content-body">
-        <div class="content-blocks">${Store.renderBlocks(p.content||[])}</div>
-      </div>
-    </div>`;
-
-    // Render likes + comments
-    renderComments(p.id, 'interactSection');
+  function waitForStore(cb) {
+    if (typeof window.Store !== 'undefined' && typeof window.Store.getProject === 'function') cb();
+    else setTimeout(() => waitForStore(cb), 50);
   }
   function esc(s=''){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+  waitForStore(async () => {
+    const id = new URLSearchParams(location.search).get('id');
+    const el = document.getElementById('pageContent');
+    el.innerHTML = '<div class="fb-loading"><span class="fb-spinner"></span> Chargement...</div>';
+    const p = id ? await Store.getProject(id) : null;
+
+    if (!p) {
+      el.innerHTML = `<div class="section"><p style="color:var(--red);font-family:var(--mono)">// Projet introuvable.</p><a href="/Portfolio/index.html" class="btn btn-ghost" style="margin-top:1rem">← Retour</a></div>`;
+    } else {
+      document.title = `${p.title} | 0xSaidoss`;
+      const statusClass = { complete:'badge-green', wip:'badge-amber', ctf:'badge-red' }[p.status] || 'badge-cyan';
+      const statusLabel = { complete:'Terminé', wip:'En cours', ctf:'CTF' }[p.status] || p.status;
+      el.innerHTML = `
+      <div class="content-page">
+        <div class="content-hero">
+          <div class="ch-inner">
+            <a href="/Portfolio/index.html#projects" class="back-link">← Retour aux projets</a>
+            <div class="ch-meta">
+              <span class="badge ${statusClass}">${statusLabel}</span>
+              <span style="font-family:var(--mono);font-size:.7rem;color:var(--txt3)">${new Date(p.createdAt).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</span>
+            </div>
+            <h1 class="ch-title">${esc(p.title)}</h1>
+            <p class="ch-excerpt">${esc(p.summary||'')}</p>
+            <div class="ch-tags">${(p.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')}</div>
+            ${p.githubUrl ? `<div style="margin-top:1.5rem"><a href="${p.githubUrl}" target="_blank" rel="noopener" class="btn btn-cyan">↗ Voir sur GitHub</a></div>` : ''}
+          </div>
+          <div class="ch-emoji">${p.coverEmoji||'⬡'}</div>
+        </div>
+        <div class="content-body">
+          <div class="content-blocks">${Store.renderBlocks(p.content||[])}</div>
+        </div>
+      </div>`;
+      renderComments(p.id, 'interactSection');
+    }
+  });
 </script>
 </body>
 </html>

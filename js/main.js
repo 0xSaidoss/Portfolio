@@ -1,50 +1,69 @@
 /* ============================================================
-   main.js — 0xSaidoss Portfolio
+   main.js — 0xSaidoss Portfolio (Firebase version)
+   Toutes les fonctions Store sont async — on utilise await.
    ============================================================ */
 'use strict';
 
-/* EmailJS — remplace par tes clés sur emailjs.com */
 const EMAILJS_SERVICE_ID  = 'YOUR_SERVICE_ID';
 const EMAILJS_TEMPLATE_ID = 'YOUR_TEMPLATE_ID';
 const EMAILJS_PUBLIC_KEY  = 'YOUR_PUBLIC_KEY';
 
+function waitForStore(cb) {
+  if (typeof window.Store !== 'undefined' && typeof window.Store.getProjects === 'function') {
+    cb();
+  } else {
+    setTimeout(() => waitForStore(cb), 50);
+  }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  Store.recordVisit();
   initCursor();
   initNav();
   initMatrix();
   initReveal();
   initStats();
   initTyping();
-  renderProjects();
-  renderArsenal();
-  renderBlog();
-  initFilter();
-  initTabs();
   initContact();
-  initSkillBars();
+
+  waitForStore(() => {
+    // Écoute en temps réel — les visiteurs voient les changements instantanément
+    Store.onProjectsChange(projects => {
+      renderProjectsData(projects);
+      initFilter();
+    });
+    Store.onPostsChange(posts => {
+      renderBlogData(posts);
+      initTabs();
+    });
+    Store.onArsenalChange(cats => {
+      renderArsenalData(cats);
+    });
+    // Enregistre la visite (admin exclu)
+    Store.recordVisit && Store.recordVisit().catch(() => {});
+  });
 });
+
+/* ── LOADING STATE ── */
+function showLoadingState() {
+  ['projectsGrid','blogGrid','arsenalGrid'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = `<div class="fb-loading"><span class="fb-spinner"></span> Chargement...</div>`;
+  });
+}
+function hideLoadingState() {}
 
 /* ── CURSOR ── */
 function initCursor() {
-  const dot  = document.getElementById('cursor');
-  const ring = document.getElementById('cursorFollower');
-  if (!dot || !ring) return;
+  const dot=document.getElementById('cursor'),ring=document.getElementById('cursorFollower');
+  if(!dot||!ring)return;
   let mx=0,my=0,fx=0,fy=0;
-  document.addEventListener('mousemove', e => {
-    mx=e.clientX; my=e.clientY;
-    dot.style.transform = `translate(${mx}px,${my}px) translate(-50%,-50%)`;
-  }, {passive:true});
-  (function animRing(){
-    fx+=(mx-fx)*.1; fy+=(my-fy)*.1;
-    ring.style.transform=`translate(${fx}px,${fy}px) translate(-50%,-50%)`;
-    requestAnimationFrame(animRing);
-  })();
+  document.addEventListener('mousemove',e=>{mx=e.clientX;my=e.clientY;dot.style.transform=`translate(${mx}px,${my}px) translate(-50%,-50%)`;},{passive:true});
+  (function animRing(){fx+=(mx-fx)*.1;fy+=(my-fy)*.1;ring.style.transform=`translate(${fx}px,${fy}px) translate(-50%,-50%)`;requestAnimationFrame(animRing);})();
   document.addEventListener('mousedown',()=>{dot.classList.add('active');ring.classList.add('active');});
-  document.addEventListener('mouseup',  ()=>{dot.classList.remove('active');ring.classList.remove('active');});
-  document.querySelectorAll('a,button,.proj-card,.blog-card,.skill-cat').forEach(el=>{
-    el.addEventListener('mouseenter',()=>ring.classList.add('active'));
-    el.addEventListener('mouseleave',()=>ring.classList.remove('active'));
+  document.addEventListener('mouseup',()=>{dot.classList.remove('active');ring.classList.remove('active');});
+  document.addEventListener('mouseover',e=>{
+    if(e.target.closest('a,button,.proj-card,.blog-card,.skill-cat')) ring.classList.add('active');
+    else ring.classList.remove('active');
   });
 }
 
@@ -68,18 +87,18 @@ function initMatrix() {
   if(!c)return;
   const ctx=c.getContext('2d');
   const resize=()=>{c.width=innerWidth;c.height=innerHeight;};
-  resize(); window.addEventListener('resize',resize,{passive:true});
-  const chars='アイウエオカキクケコ0123456789ABCDEF<>{}[]|/\\';
-  const fs=13; let cols,drops;
+  resize();window.addEventListener('resize',resize,{passive:true});
+  const chars='アイウエオ0123456789ABCDEF<>{}[]|/\\';
+  const fs=13;let cols,drops;
   const reset=()=>{cols=Math.floor(c.width/fs);drops=Array(cols).fill(1);};
-  reset(); window.addEventListener('resize',reset,{passive:true});
+  reset();window.addEventListener('resize',reset,{passive:true});
   setInterval(()=>{
     ctx.fillStyle='rgba(5,10,14,.05)';ctx.fillRect(0,0,c.width,c.height);
     ctx.font=`${fs}px Share Tech Mono,monospace`;
     drops.forEach((y,i)=>{
       ctx.fillStyle=`rgba(0,255,136,${Math.random()>.9?1:.4})`;
       ctx.fillText(chars[Math.floor(Math.random()*chars.length)],i*fs,y*fs);
-      if(y*fs>c.height&&Math.random()>.975)drops[i]=0; drops[i]++;
+      if(y*fs>c.height&&Math.random()>.975)drops[i]=0;drops[i]++;
     });
   },65);
 }
@@ -98,7 +117,7 @@ function initStats() {
     entries.forEach(e=>{
       if(!e.isIntersecting)return;
       const el=e.target,target=+el.dataset.target;
-      let cur=0; const step=Math.max(1,Math.ceil(target/40));
+      let cur=0;const step=Math.max(1,Math.ceil(target/40));
       const t=setInterval(()=>{cur=Math.min(cur+step,target);el.textContent=cur+'+';if(cur>=target)clearInterval(t);},40);
       io.unobserve(el);
     });
@@ -123,15 +142,19 @@ function initTyping() {
   setTimeout(run,1500);
 }
 
-/* ── RENDER PROJECTS ── */
-function renderProjects() {
+/* ── RENDER PROJECTS (realtime) ── */
+async function renderProjectsData(projects) {
   const grid=document.getElementById('projectsGrid');
   if(!grid)return;
-  const projects=Store.getProjects();
-  if(!projects.length){grid.innerHTML='<p style="color:var(--txt3);font-family:var(--mono);font-size:.8rem">// Aucun projet.</p>';return;}
-  grid.innerHTML=projects.map(p=>{
-    const likes=Store.getLikes(p.id),comments=Store.getComments(p.id);
-    return `<div class="proj-card reveal" data-category="${p.category||'lab'}" onclick="window.location='/Portfolio/pages/project.html?id=${p.id}'">
+  if(!projects||!projects.length){grid.innerHTML='<p style="color:var(--txt3);font-family:var(--mono);font-size:.8rem">// Aucun projet.</p>';return;}
+
+  const [likesArr, commentsArr] = await Promise.all([
+    Promise.all(projects.map(p=>Store.getLikes(p.id))),
+    Promise.all(projects.map(p=>Store.getComments(p.id))),
+  ]);
+
+  grid.innerHTML = projects.map((p,i) => `
+    <div class="proj-card reveal" data-category="${p.category||'lab'}" onclick="window.location='/Portfolio/pages/project.html?id=${p.id}'">
       <div class="proj-banner"><span style="position:relative;z-index:1">${p.coverEmoji||'⬡'}</span><div class="proj-banner-ov"></div></div>
       <div class="proj-body">
         <p class="proj-cat">${escHtml(p.category||'lab')}</p>
@@ -143,40 +166,46 @@ function renderProjects() {
           <button class="pBtn-detail" onclick="event.stopPropagation();window.location='/Portfolio/pages/project.html?id=${p.id}'">Détails →</button>
         </div>
         <div class="interact-bar" onclick="event.stopPropagation()">
-          <button class="like-btn${Store.hasLiked(p.id)?' liked':''}" onclick="toggleLike('${p.id}',this)">
-            <span class="heart">♥</span> <span class="like-count">${likes}</span>
+          <button class="like-btn" id="like-${p.id}" onclick="toggleLike('${p.id}')">
+            <span class="heart">♥</span> <span class="like-count">${likesArr[i]}</span>
           </button>
-          <span class="comment-count">💬 ${comments.length}</span>
+          <span class="comment-count">💬 ${commentsArr[i].length}</span>
         </div>
       </div>
-    </div>`;
-  }).join('');
+    </div>`).join('');
+
+  // Charger l'état liked pour chaque projet
+  projects.forEach(async p => {
+    const liked = await Store.hasLiked(p.id);
+    document.getElementById(`like-${p.id}`)?.classList.toggle('liked', liked);
+  });
+
   initReveal();
 }
 
 /* ── LIKES ── */
-function toggleLike(id,btn){
-  const liked=Store.toggleLike(id);
-  btn.classList.toggle('liked',liked);
-  btn.querySelector('.like-count').textContent=Store.getLikes(id);
-  const h=btn.querySelector('.heart');
-  h.style.transform='scale(1.5)';
-  setTimeout(()=>h.style.transform='scale(1)',300);
+async function toggleLike(id) {
+  const btn = document.getElementById(`like-${id}`);
+  if (!btn) return;
+  const liked = await Store.toggleLike(id);
+  btn.classList.toggle('liked', liked);
+  const count = await Store.getLikes(id);
+  btn.querySelector('.like-count').textContent = count;
+  const h=btn.querySelector('.heart');h.style.transform='scale(1.5)';setTimeout(()=>h.style.transform='scale(1)',300);
 }
-function toggleLikeDetail(id){
-  const liked=Store.toggleLike(id);
+async function toggleLikeDetail(id) {
   const btn=document.getElementById('detailLikeBtn');
   if(!btn)return;
+  const liked=await Store.toggleLike(id);
   btn.classList.toggle('liked',liked);
-  btn.querySelector('.like-count').textContent=Store.getLikes(id);
+  btn.querySelector('.like-count').textContent=await Store.getLikes(id);
 }
 
-/* ── ARSENAL (dynamic from Store) ── */
-function renderArsenal(){
+/* ── ARSENAL (async) ── */
+function renderArsenalData(cats) {
   const container=document.getElementById('arsenalGrid');
   if(!container)return;
-  const cats=Store.getArsenal();
-  if(!cats||!cats.length){ container.innerHTML=''; return; }
+  if(!cats||!cats.length)return;
   container.innerHTML=cats.map(cat=>`
     <div class="skill-cat">
       <div class="skill-cat-hdr"><span class="skill-ico">${cat.icon||'⬡'}</span><span class="skill-cat-name">${escHtml(cat.name)}</span></div>
@@ -190,11 +219,12 @@ function renderArsenal(){
   initSkillBars();
 }
 
-/* ── BLOG ── */
-function renderBlog(filter='all'){
+/* ── BLOG (async) ── */
+function renderBlogData(allPosts, filter='all') {
   const grid=document.getElementById('blogGrid');
   if(!grid)return;
-  const posts=Store.getPublishedPosts();
+  const posts=filter==='all'?allPosts:allPosts.filter(p=>p.type===filter);
+  window._lastPosts = allPosts;
   const filtered=filter==='all'?posts:posts.filter(p=>p.type===filter);
   if(!filtered.length){grid.innerHTML='<p style="color:var(--txt3);font-family:var(--mono);font-size:.8rem">// Aucun article publié.</p>';return;}
   grid.innerHTML=filtered.map(p=>`
@@ -209,7 +239,7 @@ function renderBlog(filter='all'){
 }
 
 /* ── FILTER / TABS ── */
-function initFilter(){
+function initFilter() {
   document.querySelectorAll('.fbtn').forEach(btn=>{
     btn.addEventListener('click',()=>{
       document.querySelectorAll('.fbtn').forEach(b=>b.classList.remove('active'));
@@ -219,17 +249,18 @@ function initFilter(){
     });
   });
 }
-function initTabs(){
+function initTabs() {
   document.querySelectorAll('.tab').forEach(tab=>{
     tab.addEventListener('click',()=>{
       document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-      tab.classList.add('active'); renderBlog(tab.dataset.tab);
+      tab.classList.add('active');
+      renderBlogData(window._lastPosts||[], tab.dataset.tab);
     });
   });
 }
 
 /* ── CONTACT — EmailJS ── */
-function initContact(){
+function initContact() {
   const form=document.getElementById('contactForm');
   if(!form)return;
   form.addEventListener('submit',async e=>{
@@ -238,12 +269,10 @@ function initContact(){
     const name=form.querySelector('#cname').value.trim();
     const email=form.querySelector('#cemail').value.trim();
     const message=form.querySelector('#cmsg').value.trim();
-    btn.textContent='⟳ Envoi...'; btn.disabled=true;
+    btn.textContent='⟳ Envoi...';btn.disabled=true;
     try {
       if(typeof emailjs!=='undefined'&&EMAILJS_SERVICE_ID!=='YOUR_SERVICE_ID'){
-        await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_ID,{
-          from_name:name,from_email:email,message,reply_to:email,to_name:'Saidou'
-        },EMAILJS_PUBLIC_KEY);
+        await emailjs.send(EMAILJS_SERVICE_ID,EMAILJS_TEMPLATE_ID,{from_name:name,from_email:email,message,reply_to:email,to_name:'Saidou'},EMAILJS_PUBLIC_KEY);
         showToast('✓ Message envoyé !');
       } else {
         const s=encodeURIComponent(`[Portfolio] Message de ${name}`);
@@ -252,20 +281,21 @@ function initContact(){
         showToast('✓ Client mail ouvert !');
       }
       form.reset();
-    } catch(err){
-      showToast('✗ Erreur. Écrivez directement à msaidou02.diallo@gmail.com');
-    }
-    btn.textContent='⬡ Envoyer'; btn.disabled=false;
+    } catch(err){showToast('✗ Erreur. Écrivez à msaidou02.diallo@gmail.com');}
+    btn.textContent='⬡ Envoyer';btn.disabled=false;
   });
 }
 
-/* ── COMMENTS ── */
-function renderComments(projectId,containerId){
+/* ── COMMENTS (async) ── */
+async function renderComments(projectId, containerId) {
   const container=document.getElementById(containerId);
   if(!container)return;
-  const comments=Store.getComments(projectId);
-  const liked=Store.hasLiked(projectId);
-  const likeCount=Store.getLikes(projectId);
+  container.innerHTML=`<div class="fb-loading"><span class="fb-spinner"></span> Chargement...</div>`;
+  const [comments, likeCount, liked] = await Promise.all([
+    Store.getComments(projectId),
+    Store.getLikes(projectId),
+    Store.hasLiked(projectId),
+  ]);
   container.innerHTML=`
     <div class="interact-bar">
       <button class="like-btn${liked?' liked':''}" id="detailLikeBtn" onclick="toggleLikeDetail('${projectId}')">
@@ -277,7 +307,7 @@ function renderComments(projectId,containerId){
       <form class="comment-form" onsubmit="submitComment(event,'${projectId}','${containerId}')">
         <div class="comment-form-row">
           <input type="text" id="commentName" placeholder="Ton pseudo" required maxlength="50"/>
-          <input type="email" id="commentEmail" placeholder="Email (privé, optionnel)" maxlength="100"/>
+          <input type="email" id="commentEmail" placeholder="Email (optionnel)" maxlength="100"/>
         </div>
         <textarea id="commentText" placeholder="Ton commentaire..." required maxlength="1000"></textarea>
         <button type="submit" class="comment-submit">⬡ Commenter</button>
@@ -295,25 +325,27 @@ function renderComments(projectId,containerId){
     </div>`;
 }
 
-function submitComment(e,projectId,containerId){
+async function submitComment(e, projectId, containerId) {
   e.preventDefault();
   const author=document.getElementById('commentName').value.trim();
   const text=document.getElementById('commentText').value.trim();
   if(!author||!text)return;
-  Store.addComment(projectId,{author,text});
-  renderComments(projectId,containerId);
+  const btn=e.target.querySelector('button[type="submit"]');
+  btn.textContent='⟳ Envoi...';btn.disabled=true;
+  await Store.addComment(projectId,{author,text});
+  await renderComments(projectId,containerId);
   showToast('✓ Commentaire ajouté !');
 }
 
 /* ── SKILL BARS ── */
-function initSkillBars(){
+function initSkillBars() {
   const bars=document.querySelectorAll('.skill-fill');
   if(!bars.length)return;
   const io=new IntersectionObserver(entries=>{
     entries.forEach(e=>{
       if(!e.isIntersecting)return;
       const idx=[...document.querySelectorAll('.skill-fill')].indexOf(e.target);
-      setTimeout(()=>{ e.target.style.width=(e.target.dataset.pct||0)+'%'; },idx*55);
+      setTimeout(()=>{e.target.style.width=(e.target.dataset.pct||0)+'%';},idx*55);
       io.unobserve(e.target);
     });
   },{threshold:0.3});
@@ -324,8 +356,6 @@ function initSkillBars(){
 function escHtml(s=''){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function fmtDate(iso){if(!iso)return'';return new Date(iso).toLocaleDateString('fr-FR',{day:'numeric',month:'short',year:'numeric'});}
 function showToast(msg){
-  const t=document.getElementById('toast');
-  if(!t)return;
-  t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),3200);
+  const t=document.getElementById('toast');if(!t)return;
+  t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200);
 }
