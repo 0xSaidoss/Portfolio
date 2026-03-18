@@ -28,58 +28,118 @@
 
 <!-- HERO -->
 <section id="hero" class="hero-section">
-  <!-- Vidéo de fond — plusieurs sources de secours -->
+
+  <!-- ── Vidéo de fond ── -->
   <div class="hero-video-wrap" aria-hidden="true">
     <video class="hero-video" id="heroBgVideo" autoplay muted loop playsinline preload="auto">
-      <!-- Sources multiples — le navigateur prend la première qui marche -->
-      <source src="https://assets.mixkit.co/videos/preview/mixkit-hands-of-a-hacker-typing-on-a-keyboard-483-large.mp4" type="video/mp4"/>
-      <source src="https://assets.mixkit.co/videos/preview/mixkit-computer-code-in-a-monitor-close-up-4k-view-11235-large.mp4" type="video/mp4"/>
-      <source src="https://cdn.coverr.co/videos/coverr-close-up-of-computer-code-on-a-screen-2633/1080p.mp4" type="video/mp4"/>
+      <!-- Chemin si serveur lancé depuis le dossier PARENT de Portfolio -->
+      <source src="/Portfolio/assets/videos/hero-bg.mp4" type="video/mp4"/>
+      <!-- Chemin si serveur lancé depuis DANS le dossier Portfolio -->
+      <source src="assets/videos/hero-bg.mp4" type="video/mp4"/>
+      <!-- Fallback Mixkit si vidéo locale absente -->
+      <source src="https://assets.mixkit.co/videos/46639/46639-720.mp4" type="video/mp4"/>
     </video>
     <div class="hero-video-overlay"></div>
   </div>
-  <!-- Canvas cyber animation (toujours visible, derrière la vidéo si elle charge) -->
-  <canvas id="heroBgCanvas" aria-hidden="true"></canvas>
 
+
+  <!-- ── Contenu principal ── -->
   <div class="hero-inner">
+
+    <!-- Colonne gauche : identité + CTA -->
     <div class="hero-content">
+
+      <!-- Badge disponibilité -->
       <div class="hero-eyebrow">
         <span class="hero-dot"></span>
         <span>Disponible pour stage · Analyste Cybersécurité</span>
       </div>
+
+      <!-- Nom -->
       <h1 class="hero-name">
         <span class="line1">Mouhamadou</span>
         <span class="line2">Saidou</span>
       </h1>
+
+      <!-- Rôle animé -->
       <p class="hero-role">
         <span class="hero-role-prefix">~/</span>
-        <span id="typingText">Binary Exploitation</span>
+        <span id="typingText" class="color-0">Binary Exploitation</span>
         <span class="cursor-pipe">|</span>
       </p>
-      <p class="hero-bio">Passionné d'<span class="kw-blue">Exploitation Binaire</span> &amp; <span class="kw-purple">Reverse Engineering</span> · Futur <span class="kw-green">Analyste Cybersécurité</span> · <span class="kw-amber">SOC Labs</span> · CTF Player · Abidjan, Côte d'Ivoire.</p>
+
+      <!-- Bio courte avec mots-clés colorés -->
+      <p class="hero-bio">
+        Passionné de <span class="kw-blue">Binary Exploitation</span> &amp; <span class="kw-purple">Reverse Engineering</span> ·
+        Futur <span class="kw-green">Analyste Cyber</span> · <span class="kw-amber">SOC Labs</span> ·
+        100+ machines TryHackMe · Abidjan, Côte d'Ivoire
+      </p>
+
+      <!-- Boutons CTA -->
       <div class="hero-btns">
         <a href="#projects" class="btn btn-accent">Voir les projets →</a>
         <a href="#blog" class="btn btn-ghost">Writeups CTF</a>
+        <a href="#contact" class="btn btn-ghost">Me contacter</a>
+      </div>
+
+      <!-- Liens sociaux inline -->
+      <div class="hero-socials">
+        <a href="https://tryhackme.com/p/0xSaidoss" target="_blank" rel="noopener" class="hero-social-link">
+          <span>TryHackMe</span><span class="hero-social-val">0xSaidoss</span>
+        </a>
+        <span class="hero-social-sep">·</span>
+        <a href="https://www.linkedin.com/in/diallo-saidou/" target="_blank" rel="noopener" class="hero-social-link">
+          <span>LinkedIn</span>
+        </a>
+        <span class="hero-social-sep">·</span>
+        <a href="https://www.root-me.org/0xSaidoss" target="_blank" rel="noopener" class="hero-social-link">
+          <span>Root-Me</span>
+        </a>
       </div>
     </div>
-    <div class="hero-stats">
-      <div class="stat-card">
-        <span class="snum" data-target="100">0</span>
-        <span class="slbl">Machines THM</span>
+
+    <!-- Colonne droite : stats -->
+    <div class="hero-right">
+      <div class="hero-stats">
+        <div class="stat-card">
+          <span class="snum" data-target="100">0+</span>
+          <span class="slbl">Machines THM</span>
+        </div>
+        <div class="stat-card">
+          <span class="snum" data-target="15">0+</span>
+          <span class="slbl">BinExp Root-Me</span>
+        </div>
+        <div class="stat-card">
+          <span class="snum" data-target="5">0</span>
+          <span class="slbl">Labs Perso</span>
+        </div>
       </div>
-      <div class="stat-card">
-        <span class="snum" data-target="15">0</span>
-        <span class="slbl">Root-Me BinExp</span>
-      </div>
-      <div class="stat-card">
-        <span class="snum" data-target="5">0</span>
-        <span class="slbl">Projets Labs</span>
+
+      <!-- Badge certifications/programmes -->
+      <div class="hero-badges">
+        <div class="hero-badge">
+          <span class="hb-dot" style="background:#4f9cf9"></span>
+          <span>We.Code — GIZ / EPITECH</span>
+        </div>
+        <div class="hero-badge">
+          <span class="hb-dot" style="background:#a78bfa"></span>
+          <span>BTS Réseaux &amp; Télécoms — HEGES</span>
+        </div>
+        <div class="hero-badge">
+          <span class="hb-dot" style="background:#22c55e"></span>
+          <span>Kali Linux · Ubuntu · GNS3</span>
+        </div>
       </div>
     </div>
+
   </div>
+
+  <!-- Scroll indicator -->
   <div class="hero-scroll-hint" aria-hidden="true">
-    <span>Scroll</span><div class="scroll-line"></div>
+    <div class="scroll-mouse"><div class="scroll-wheel"></div></div>
+    <span>Scroll</span>
   </div>
+
 </section>
 
 <!-- ABOUT -->
@@ -270,8 +330,8 @@
 <div class="cursor" id="cursor"></div>
 <div class="cursor-follower" id="cursorFollower"></div>
 <div class="toast" id="toast"></div>
-<script type="module" src="/Portfolio/js/firebase-store.js?v=1773560641"></script>
-<script defer src="/Portfolio/js/main.js?v=1773560641"></script>
-<script src="/Portfolio/js/pdf-viewer.js?v=1773560641"></script>
+<script type="module" src="/Portfolio/js/firebase-store.js?v=1773786579"></script>
+<script defer src="/Portfolio/js/main.js?v=1773786579"></script>
+<script src="/Portfolio/js/pdf-viewer.js?v=1773786579"></script>
 </body>
 </html>
